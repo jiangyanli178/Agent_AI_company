@@ -1,0 +1,14 @@
+{
+  "snapshot_id": "SNAP-4007457c",
+  "symbol": "600519.SS（示例标的）",
+  "source": "baostock:sh.600519（真实公开数据·独立服务器·国内直连）",
+  "n_bars": 504,
+  "date_range": [
+    "2024-10-11",
+    "2026-11-06"
+  ],
+  "pool_definition": "单一标的全样本日线（前复权），无成分剔入剔出，无幸存者偏差",
+  "provider": "baostock",
+  "code": "sh.600519",
+  "adjust": "qfq（前复权）"
+}

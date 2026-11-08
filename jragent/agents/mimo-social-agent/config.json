@@ -1,0 +1,71 @@
+{
+  "platform": "bilibili",
+  "account": {
+    "username": "",
+    "password": ""
+  },
+  "topic": "python教程",
+  "keywords": [
+    "求教程",
+    "怎么做的",
+    "求推荐",
+    "有教程吗",
+    "同款"
+  ],
+  "persona": "友善的数码/技术爱好者，说话自然简短",
+  "reply_rules": {
+    "style": "口语化简短回复(15~40字)，像真实网友闲聊；紧扣评论内容，有问必答；不吹捧不推销",
+    "avoid": [
+      "广告",
+      "微信",
+      "加群",
+      "联系方式",
+      "外链",
+      "http",
+      "代做",
+      "刷量"
+    ]
+  },
+  "limits": {
+    "max_replies_per_run": 5,
+    "max_replies_per_day": 20,
+    "min_interval_seconds": 30
+  },
+  "skip": {
+    "users": [],
+    "min_comment_likes": 0
+  },
+  "pipeline": {
+    "enabled": false,
+    "time": "09:00",
+    "search": "",
+    "max_videos": 3,
+    "max_comments_per_video": 20,
+    "max_replies_per_run": 5,
+    "period": "2y",
+    "default_symbol": "600519",
+    "strategy_keywords": [
+      "均线",
+      "金叉",
+      "死叉",
+      "交叉",
+      "突破",
+      "止损",
+      "回测",
+      "策略",
+      "量化",
+      "高抛低吸",
+      "网格",
+      "打板",
+      "MACD",
+      "布林",
+      "趋势"
+    ],
+    "reply_template": "【回测参考】收益 {total_return}｜最大回撤 {max_drawdown}（历史回测不代表未来，不构成投资建议）"
+  },
+  "prompts": {
+    "reply_generation": "你是一名普通的{platform}网友，正在刷与「{topic}」相关的视频评论区。\n人设：{persona}\n回复风格：{style}\n\n请针对下面这条评论写一条回复：\n【评论内容】{comment}\n【评论作者】{user}\n\n硬性要求：\n1. 像真实网友一样自然口语化，严禁客服腔、营销腔、排比句\n2. 紧扣评论内容，有共鸣、有补充或有轻幽默，不跑题不敷衍\n3. 一次只输出回复正文，不要任何前后缀、引号或解释\n4. 严禁出现违禁内容：{avoid}\n5. 严禁留下联系方式、外链或引流信息",
+    "comment_filter": "你是{platform}评论筛选助手。请从下面的评论列表中筛选出与主题「{topic}」相关、值得回复的评论。\n参考关键词（命中任一或语义相关即入选）：{keywords}\n跳过规则：忽略用户 {skip_users} 的评论；点赞数低于 {min_likes} 的评论可忽略。\n\n评论列表（格式：[序号] 用户 | 点赞 | 内容）：\n{comments}\n\n输出要求：只输出 JSON 数组，每项为 {\"index\": 序号, \"reason\": \"入选理由(10字内)\"}，无关评论不要输出，不要任何解释文字。",
+    "keyword_expansion": "你是{platform}话题运营助手。请围绕主题「{topic}」扩展一批用于评论筛选的关键词。\n已有关键词：{keywords}\n\n要求：\n1. 输出 8~12 个简体中文关键词或短语，每行一个\n2. 覆盖同义词、口语化说法、常见提问句式和场景词\n3. 与主题强相关，不要「视频」「好看」等宽泛词\n4. 只输出关键词列表，不要任何解释"
+  }
+}

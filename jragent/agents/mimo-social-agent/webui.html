@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>刷视频回复助手 · 控制台</title>
+<style>
+  :root {
+    --bg: #eef1fb;
+    --card: rgba(255, 255, 255, .78);
+    --ink: #1b2340; --muted: #6b7694;
+    --line: #e4e8f6;
+    --accent: #5b6cf0; --accent-2: #8b5cf6; --accent-3: #22d3ee;
+    --accent-ink: #fff; --ok: #16a34a; --warn: #d97706; --err: #ef4444;
+    --shadow: 0 18px 44px rgba(43, 55, 120, .10);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink);
+    background:
+      radial-gradient(1000px 600px at 90% -10%, rgba(139, 92, 246, .14), transparent 60%),
+      radial-gradient(900px 560px at -10% 100%, rgba(34, 211, 238, .13), transparent 60%),
+      linear-gradient(160deg, #f2f4fd 0%, #e9edfb 50%, #eef0ff 100%);
+    background-attachment: fixed;
+    font: 14px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 极光背景装饰 ---------- */
+  .aurora { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .aurora .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; }
+  .aurora .b1 {
+    width: 520px; height: 520px; left: -140px; top: -120px;
+    background: radial-gradient(circle at 30% 30%, rgba(91, 108, 240, .55), rgba(91, 108, 240, 0) 70%);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  .aurora .b2 {
+    width: 480px; height: 480px; right: -120px; top: 18%;
+    background: radial-gradient(circle at 60% 40%, rgba(139, 92, 246, .5), rgba(139, 92, 246, 0) 70%);
+    animation: drift 22s ease-in-out infinite alternate-reverse;
+  }
+  .aurora .b3 {
+    width: 560px; height: 560px; left: 18%; bottom: -220px;
+    background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, .4), rgba(34, 211, 238, 0) 70%);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(42px, 28px, 0) scale(1.08); }
+  }
+
+  .view { min-height: 100vh; position: relative; z-index: 1; animation: viewIn .45s ease both; }
+  .hidden { display: none !important; }
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---------- 滚动条 ---------- */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border-radius: 999px; border: 3px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ---------- 加载遮罩 ---------- */
+  #loading {
+    position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(34, 211, 238, .35), transparent 60%),
+      radial-gradient(800px 460px at 10% 110%, rgba(139, 92, 246, .45), transparent 60%),
+      linear-gradient(135deg, #2f3ebf 0%, #5546d8 55%, #7a55e8 100%);
+    color: #fff;
+  }
+  .spinner {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 4px solid rgba(255,255,255,.25); border-top-color: #fff;
+    border-right-color: rgba(34, 211, 238, .9);
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 34px rgba(255, 255, 255, .35);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading .tip { opacity: .85; font-size: 13px; letter-spacing: .04em; }
+
+  /* ---------- 登录页 ---------- */
+  #view-login {
+    display: flex; align-items: stretch; justify-content: center;
+    background:
+      radial-gradient(1100px 520px at 88% -10%, rgba(124, 92, 240, .40), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(34, 211, 238, .28), transparent 60%),
+      linear-gradient(135deg, #2f3ebf 0%, #5546d8 55%, #7a55e8 100%);
+    padding: 32px 20px;
+  }
+  .login-wrap {
+    display: flex; width: 100%; max-width: 1020px; min-height: 600px;
+    background: rgba(255, 255, 255, .08); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 26px; overflow: hidden; backdrop-filter: blur(18px) saturate(1.2);
+    box-shadow: 0 36px 90px rgba(14, 18, 60, .40);
+  }
+  .hero {
+    flex: 1.1; padding: 46px 42px; color: #fff; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: center; gap: 17px;
+  }
+  .hero::before {
+    content: ""; position: absolute; width: 380px; height: 380px; right: -130px; top: -130px;
+    background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%);
+    border-radius: 50%; pointer-events: none;
+  }
+  .hero::after {
+    content: ""; position: absolute; width: 300px; height: 300px; left: -110px; bottom: -110px;
+    background: radial-gradient(circle, rgba(34, 211, 238, .30), transparent 70%);
+    border-radius: 50%; pointer-events: none;
+  }
+  .hero > * { position: relative; z-index: 1; }
+  .hero .logo {
+    display: inline-flex; align-items: center; gap: 10px; align-self: flex-start;
+    font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; opacity: .92;
+    padding: 7px 14px; border-radius: 999px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.20);
+  }
+  .hero .logo .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #8ef0c0;
+    box-shadow: 0 0 12px rgba(142, 240, 192, .95);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.25); opacity: .7; }
+  }
+  .hero h1 {
+    margin: 0; font-size: 32px; line-height: 1.32; font-weight: 750; letter-spacing: .01em;
+    text-shadow: 0 8px 30px rgba(10, 14, 60, .35);
+  }
+  .hero p.lead { margin: 0; opacity: .88; font-size: 14px; max-width: 400px; }
+  .feature {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 10px 12px; border-radius: 14px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+    transition: background .2s, transform .2s;
+  }
+  .feature:hover { background: rgba(255,255,255,.14); transform: translateX(4px); }
+  .feature .ic {
+    flex: none; width: 36px; height: 36px; border-radius: 11px;
+    background: linear-gradient(135deg, rgba(255,255,255,.26), rgba(255,255,255,.10));
+    border: 1px solid rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    box-shadow: 0 8px 18px rgba(10, 14, 60, .22);
+  }
+  .feature b { display: block; font-size: 14px; }
+  .feature span { opacity: .78; font-size: 12.5px; }
+  .hero-art {
+    margin-top: 8px; width: 100%; max-width: 380px; border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.22);
+    box-shadow: 0 26px 60px rgba(8, 12, 48, .40);
+    animation: floaty 7s ease-in-out infinite alternate;
+  }
+  @keyframes floaty {
+    from { transform: translateY(0) rotate(-.4deg); }
+    to { transform: translateY(-12px) rotate(.4deg); }
+  }
+
+  .login-card {
+    width: 420px; padding: 46px 42px;
+    background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(247,248,255,.95));
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
+    position: relative; overflow: hidden;
+  }
+  .login-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+  }
+  .login-card h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: .01em; }
+  .login-card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 22px; }
+  .login-card .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .02em; }
+  .field input, .field select, .field textarea {
+    width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 13px;
+    font: inherit; color: var(--ink); background: rgba(255,255,255,.9); outline: none;
+    transition: border-color .18s, box-shadow .18s, transform .18s;
+  }
+  .field input:hover, .field select:hover, .field textarea:hover { border-color: #cdd5f2; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent); background: #fff;
+    box-shadow: 0 0 0 4px rgba(91, 108, 240, .16), 0 8px 22px rgba(91, 108, 240, .12);
+    transform: translateY(-1px);
+  }
+  .field textarea { resize: vertical; min-height: 62px; }
+
+  /* ---------- 按钮 ---------- */
+  .btn {
+    position: relative; overflow: hidden;
+    border: 0; border-radius: 12px; padding: 11px 18px; font: inherit;
+    font-weight: 650; letter-spacing: .02em; cursor: pointer; color: var(--accent-ink);
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    transition: transform .16s, filter .16s, box-shadow .16s;
+    box-shadow: 0 10px 24px rgba(91, 108, 240, .32);
+  }
+  .btn::after {
+    content: ""; position: absolute; top: 0; left: -90%; width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent);
+    transform: skewX(-20deg); transition: left .55s ease;
+  }
+  .btn:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: 0 14px 30px rgba(91, 108, 240, .40); }
+  .btn:hover::after { left: 130%; }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn.ghost {
+    background: rgba(238, 241, 251, .9); color: var(--accent);
+    box-shadow: none; border: 1.5px solid var(--line);
+  }
+  .btn.ghost:hover { background: #e6eafb; border-color: var(--accent); box-shadow: 0 8px 20px rgba(91, 108, 240, .16); }
+  .btn.green {
+    background: linear-gradient(120deg, #16a34a, #22c55e);
+    box-shadow: 0 10px 24px rgba(22, 163, 74, .30);
+  }
+  .btn.green:hover { box-shadow: 0 14px 30px rgba(22, 163, 74, .38); }
+  .btn.danger-ghost {
+    background: rgba(255,255,255,.08); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.45); box-shadow: none;
+  }
+  .btn.danger-ghost:hover { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.7); }
+  .btn.block { width: 100%; }
+  .btn-row { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+
+  #login-msg { min-height: 20px; margin: 12px 0 0; font-size: 12.5px; font-weight: 600; }
+  #login-msg.err { color: var(--err); }
+  #login-msg.ok { color: var(--ok); }
+  #login-msg.info { color: var(--muted); }
+  .login-tip {
+    margin-top: 18px; padding: 12px 14px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(91,108,240,.08), rgba(34,211,238,.08));
+    color: var(--muted); font-size: 12px; line-height: 1.75;
+    border: 1px solid rgba(91, 108, 240, .16);
+  }
+
+  /* ---------- 主应用 ---------- */
+  #view-app header {
+    position: sticky; top: 0; z-index: 20; overflow: hidden;
+    background: linear-gradient(115deg, #3a49cf, #6a4fe0 55%, #8250ea);
+    color: #fff; padding: 17px 28px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    box-shadow: 0 12px 32px rgba(46, 55, 150, .32);
+  }
+  #view-app header::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(600px 130px at 18% -40%, rgba(255,255,255,.22), transparent 60%),
+      radial-gradient(520px 150px at 92% 150%, rgba(34,211,238,.32), transparent 60%);
+  }
+  #view-app header > * { position: relative; z-index: 1; }
+  #view-app header .brand { display: flex; align-items: center; gap: 13px; }
+  #view-app header .brand .ic {
+    width: 42px; height: 42px; border-radius: 13px;
+    background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(255,255,255,.10));
+    border: 1px solid rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+    box-shadow: 0 10px 22px rgba(14, 18, 70, .28);
+  }
+  #view-app header h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .01em; }
+  #view-app header .tagline { margin: 2px 0 0; opacity: .85; font-size: 12px; letter-spacing: .03em; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .auth-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 650;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28);
+    backdrop-filter: blur(8px);
+  }
+  .auth-pill .led {
+    width: 8px; height: 8px; border-radius: 50%; background: #6ee7a8;
+    box-shadow: 0 0 10px rgba(110,231,168,.95);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+
+  main { max-width: 1080px; margin: 30px auto 48px; padding: 0 20px; display: grid; gap: 22px; }
+
+  /* ---------- 玻璃卡片 ---------- */
+  .card {
+    position: relative; overflow: hidden;
+    background: var(--card); border: 1px solid rgba(255,255,255,.75);
+    border-radius: var(--radius); padding: 24px 26px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.35);
+    transition: transform .22s ease, box-shadow .22s ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 26px 60px rgba(43, 55, 120, .16);
+  }
+  .card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+    opacity: .9;
+  }
+  .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .step {
+    flex: none; width: 32px; height: 32px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; font-weight: 750; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 18px rgba(91, 108, 240, .38);
+  }
+  .card h2 { margin: 0; font-size: 16px; letter-spacing: .01em; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin: 6px 0 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; }
+  .row .field { display: flex; flex-direction: column; gap: 5px; min-width: 180px; flex: 1; }
+  .row .field label { margin: 0; }
+  .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .switch {
+    display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(255,255,255,.7); border: 1px solid var(--line);
+    transition: border-color .18s, color .18s;
+  }
+  .switch:hover { border-color: var(--accent); color: var(--ink); }
+  .switch input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  /* ---------- 终端日志 ---------- */
+  .log-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 16px; border-radius: 14px 14px 0 0;
+    background: linear-gradient(120deg, #1a2040, #12172e);
+    border: 1px solid #262e4e; border-bottom: 0;
+  }
+  .log-bar span:not(.log-title) { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+  .log-bar span:nth-child(1) { background: #ff5f57; box-shadow: 0 0 8px rgba(255,95,87,.6); }
+  .log-bar span:nth-child(2) { background: #febc2e; box-shadow: 0 0 8px rgba(254,188,46,.6); }
+  .log-bar span:nth-child(3) { background: #28c840; box-shadow: 0 0 8px rgba(40,200,64,.6); }
+  .log-bar .log-title { margin-left: 10px; color: #8b96c2; font: 11.5px Consolas, monospace; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #log {
+    background: linear-gradient(180deg, #101426, #0d1122); color: #c9d2f0;
+    border-radius: 0 0 14px 14px; padding: 15px 17px;
+    font: 12px/1.75 Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+    max-height: 320px; overflow: auto;
+    border: 1px solid #262e4e; border-top: 0;
+    box-shadow: inset 0 12px 30px rgba(0, 0, 0, .28);
+    text-shadow: 0 0 12px rgba(140, 170, 255, .18);
+  }
+
+  /* ---------- 表格 ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 12px;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  th {
+    color: var(--muted); font-weight: 650; letter-spacing: .03em; font-size: 12px;
+    background: linear-gradient(180deg, #f7f8fe, #f1f3fc);
+    text-transform: uppercase;
+  }
+  tbody tr { transition: background .16s; }
+  tbody tr:hover { background: rgba(91, 108, 240, .06); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td button { padding: 5px 12px; font-size: 12.5px; }
+  .pill {
+    display: inline-block; padding: 3px 11px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  }
+  .pill.ok { background: linear-gradient(135deg, #dcf5e4, #c9f0d6); color: var(--ok); }
+  .pill.warn { background: linear-gradient(135deg, #fdf0da, #fce6c2); color: var(--warn); }
+  .pill.err { background: linear-gradient(135deg, #fde3e6, #fbd2d8); color: var(--err); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  @media (max-width: 860px) {
+    .login-wrap { flex-direction: column; }
+    .hero { padding: 32px 28px; }
+    .hero-art { max-width: 100%; }
+    .login-card { width: 100%; padding: 32px 28px; }
+    .card { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 极光背景光斑 -->
+<div class="aurora">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+</div>
+
+<!-- 加载遮罩：检测登录态 -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div>正在检测登录状态 ...</div>
+  <div class="tip">首次检测需启动一次浏览器，请稍候</div>
+</div>
+
+<!-- ============ 登录页（未登录可见） ============ -->
+<div id="view-login" class="view hidden">
+  <div class="login-wrap">
+    <aside class="hero">
+      <div class="logo"><span class="dot"></span> Social Reply Assistant</div>
+      <h1>刷视频、找评论<br>一键智能回复</h1>
+      <p class="lead">登录后解锁全部功能：配置关键词与人设、刷视频、抓取评论、自动回复，全流程本地运行。</p>
+      <div class="feature">
+        <div class="ic">&#9654;&#65039;</div>
+        <div><b>刷视频</b><span>按话题搜索或浏览推荐流，自动收集视频链接</span></div>
+      </div>
+      <div class="feature">
+        <div class="ic">&#128172;</div>
+        <div><b>抓评论</b><span>按关键词筛选目标评论，也可纯抓取指定条数</span></div>
+      </div>
+      <div class="feature">
+        <div class="ic">&#9998;&#65039;</div>
+        <div><b>智能回复</b><span>按人设生成回复，限额与违禁词双重安全闸门</span></div>
+      </div>
+      <div class="hero-art">
+        <svg viewBox="0 0 360 260" xmlns="http://www.w3.org/2000/svg" aria-label="刷视频智能回复插画">
+          <defs>
+            <linearGradient id="g-phone" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6d7cf7"/><stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="g-bubble" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#5b6cf0"/>
+            </linearGradient>
+            <linearGradient id="g-bubble2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#a78bfa"/>
+            </linearGradient>
+            <linearGradient id="g-screen" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#eef1ff"/><stop offset="1" stop-color="#dde4ff"/>
+            </linearGradient>
+          </defs>
+          <!-- 背景光点 -->
+          <circle cx="40" cy="36" r="6" fill="#a5b4fc" opacity=".55"/>
+          <circle cx="330" cy="60" r="9" fill="#7dd3fc" opacity=".5"/>
+          <circle cx="310" cy="215" r="5" fill="#f0abfc" opacity=".6"/>
+          <circle cx="28" cy="200" r="8" fill="#c4b5fd" opacity=".5"/>
+          <!-- 手机 -->
+          <rect x="132" y="26" width="96" height="186" rx="16" fill="url(#g-phone)"/>
+          <rect x="139" y="38" width="82" height="152" rx="9" fill="url(#g-screen)"/>
+          <rect x="163" y="30" width="34" height="5" rx="2.5" fill="#ffffff" opacity=".65"/>
+          <!-- 视频画面 -->
+          <rect x="146" y="46" width="68" height="58" rx="7" fill="#aab6f8"/>
+          <path d="M172 66 l18 10 -18 10 z" fill="#ffffff"/>
+          <!-- 评论行 -->
+          <rect x="146" y="112" width="52" height="7" rx="3.5" fill="#8b9cf9"/>
+          <rect x="146" y="125" width="66" height="7" rx="3.5" fill="#c7cdfb"/>
+          <rect x="146" y="142" width="44" height="7" rx="3.5" fill="#8b9cf9"/>
+          <rect x="146" y="155" width="62" height="7" rx="3.5" fill="#c7cdfb"/>
+          <circle cx="152" cy="181" r="4" fill="#f472b6"/>
+          <circle cx="166" cy="181" r="4" fill="#22d3ee"/>
+          <circle cx="180" cy="181" r="4" fill="#a78bfa"/>
+          <!-- 左侧评论气泡 -->
+          <g>
+            <rect x="18" y="78" width="104" height="46" rx="14" fill="url(#g-bubble)"/>
+            <path d="M112 112 q12 6 16 16 q-16 -2 -24 -8 z" fill="#4f5fe8"/>
+            <rect x="32" y="92" width="62" height="6" rx="3" fill="#ffffff" opacity=".9"/>
+            <rect x="32" y="104" width="40" height="6" rx="3" fill="#ffffff" opacity=".65"/>
+          </g>
+          <!-- 右侧回复气泡 -->
+          <g>
+            <rect x="238" y="128" width="106" height="52" rx="14" fill="url(#g-bubble2)"/>
+            <path d="M248 168 q-12 8 -18 18 q18 -2 28 -10 z" fill="#c66bd8"/>
+            <rect x="252" y="142" width="66" height="6" rx="3" fill="#ffffff" opacity=".92"/>
+            <rect x="252" y="154" width="52" height="6" rx="3" fill="#ffffff" opacity=".7"/>
+            <rect x="252" y="166" width="34" height="6" rx="3" fill="#ffffff" opacity=".55"/>
+          </g>
+          <!-- AI 火花 -->
+          <path d="M272 40 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4 z" fill="#fbbf24"/>
+          <path d="M74 168 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3 z" fill="#5eead4"/>
+          <path d="M320 232 l2.5 7.5 7.5 2.5 -7.5 2.5 -2.5 7.5 -2.5 -7.5 -7.5 -2.5 7.5 -2.5 z" fill="#a78bfa"/>
+        </svg>
+      </div>
+    </aside>
+
+    <section class="login-card">
+      <h2>账号登录</h2>
+      <p class="sub">登录后才能使用刷视频、抓评论等全部功能</p>
+
+      <div class="field">
+        <label>平台</label>
+        <select id="platform">
+          <option value="bilibili">B站 (bilibili)</option>
+          <option value="douyin">抖音 (douyin)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>账号（手机号 / 用户名）</label>
+        <input id="username" placeholder="例如 138xxxx0000" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input id="password" type="password" placeholder="登录密码" autocomplete="current-password">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn block" id="btn-login">保存账号并登录</button>
+        <button class="btn ghost block" id="btn-login-manual">不填密码，纯手动登录</button>
+      </div>
+
+      <div id="login-msg" class="info"></div>
+
+      <div class="login-tip">
+        账号密码仅保存在本机 config.json，用于自动填写登录表单；滑块 / 验证码需在弹出的浏览器里手动完成一次，登录态长期保存在本地。
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ 主应用（登录后可见） ============ -->
+<div id="view-app" class="view hidden">
+  <header>
+    <div class="brand">
+      <div class="ic">&#9654;&#65039;</div>
+      <div>
+        <h1>刷视频回复助手 · 本地控制台</h1>
+        <p class="tagline">刷视频 → 找关键词评论 → 智能回复，全流程本地运行</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="auth-pill" id="auth-pill"><span class="led"></span><span id="auth-text">已登录</span></span>
+      <button class="btn danger-ghost" id="btn-logout">退出登录</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 配置 -->
+    <section class="card">
+      <div class="card-head"><div class="step">1</div><h2>关键选项</h2></div>
+      <p class="sub">决定刷什么视频、找什么评论、怎么回复。保存后立即生效。</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="max-width:260px">
+          <label>场景配置预设</label>
+          <select id="preset">
+            <option value="">自定义（使用当前配置）</option>
+            <option value="tutorial">知识教程引流</option>
+            <option value="seed">好物种草带货</option>
+            <option value="fun">娱乐互动涨粉</option>
+            <option value="brand">品牌口碑答疑</option>
+          </select>
+        </div>
+        <div class="actions" style="margin:0">
+          <button class="btn ghost" id="btn-preset">套用预设</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>话题 / 搜索词（留空则看推荐流）</label>
+          <input id="topic" placeholder="例如 Python教程">
+        </div>
+        <div class="field">
+          <label>评论关键词（逗号分隔）</label>
+          <input id="keywords" placeholder="求教程, 怎么做的, 同款">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="field">
+          <label>回复人设</label>
+          <textarea id="persona" placeholder="友善的数码/技术爱好者，说话自然简短"></textarea>
+        </div>
+        <div class="field">
+          <label>违禁词（逗号分隔，命中即拦截）</label>
+          <input id="avoid" placeholder="广告, 微信, 加群, 外链">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="field">
+          <label>回复风格</label>
+          <textarea id="style" placeholder="口语化简短回复(15~40字)，像真实网友闲聊；紧扣评论，不吹捧不推销"></textarea>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="field" style="max-width:180px">
+          <label>单次最多回复</label>
+          <input id="max_run" type="number" min="1" max="20" value="5">
+        </div>
+        <div class="field" style="max-width:180px">
+          <label>每日最多回复</label>
+          <input id="max_day" type="number" min="1" max="100" value="20">
+        </div>
+        <div class="field" style="max-width:180px">
+          <label>回复间隔（秒）</label>
+          <input id="interval" type="number" min="10" max="600" value="30">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btn-save">保存配置</button>
+      </div>
+    </section>
+
+    <!-- 提示词模板 -->
+    <section class="card">
+      <div class="card-head"><div class="step">2</div><h2>提示词模板</h2></div>
+      <p class="sub">智能体生成回复、筛选评论、扩展关键词时使用的默认提示词。支持变量占位，随配置一起保存到 config.json。</p>
+      <div class="field">
+        <label>回复生成模板（变量：{platform} {topic} {persona} {style} {avoid} {comment} {user}）</label>
+        <textarea id="prompt-reply" rows="9"></textarea>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="field">
+          <label>评论筛选模板（变量：{platform} {topic} {keywords} {comments} {skip_users} {min_likes}）</label>
+          <textarea id="prompt-filter" rows="8"></textarea>
+        </div>
+        <div class="field">
+          <label>关键词扩展模板（变量：{platform} {topic} {keywords}）</label>
+          <textarea id="prompt-keywords" rows="8"></textarea>
+        </div>
+      </div>
+
+      <h2 style="margin-top:18px;font-size:14px">一键生成提示词</h2>
+      <p class="sub" style="margin-bottom:12px">选择模板后，自动把当前配置填入变量占位，生成可直接复制给智能体使用的完整提示词。</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="max-width:220px">
+          <label>生成目标</label>
+          <select id="gen-target">
+            <option value="reply">回复生成提示词</option>
+            <option value="filter">评论筛选提示词</option>
+            <option value="keywords">关键词扩展提示词</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>示例评论（可选，用于填充 {comment}）</label>
+          <input id="gen-comment" placeholder="例如：求教程，这个怎么做的？">
+        </div>
+        <div class="actions" style="margin:0">
+          <button class="btn" id="btn-gen">一键生成提示词</button>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>生成结果（可直接复制使用）</label>
+        <textarea id="gen-output" rows="8" readonly placeholder="点击「一键生成提示词」后在此显示"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn green" id="btn-copy-gen">复制生成结果</button>
+        <button class="btn ghost" id="btn-reset-prompts">恢复默认模板</button>
+      </div>
+      <p class="hint">{comment}、{comments} 等数据变量保留占位或用示例填充；其余变量在生成时自动替换为当前配置的值。</p>
+    </section>
+
+    <!-- 运行 -->
+    <section class="card">
+      <div class="card-head"><div class="step">3</div><h2>运行</h2></div>
+      <p class="sub">三步：刷视频 → 抓评论 → 回复。每一步的结果都会显示在下方。</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="max-width:220px">
+          <label>刷几个视频</label>
+          <input id="browse_limit" type="number" min="1" max="20" value="5">
+        </div>
+        <div class="actions" style="margin:0">
+          <button class="btn" id="btn-browse">1. 刷视频</button>
+        </div>
+        <div class="field">
+          <label>视频链接（也可从下表点选）</label>
+          <input id="video_url" placeholder="https://www.bilibili.com/video/BVxxxx/">
+        </div>
+        <div class="field" style="max-width:150px">
+          <label>抓取条数</label>
+          <input id="scan_max" type="number" min="1" max="50" value="10">
+        </div>
+        <div class="field">
+          <label>评论筛选关键词（逗号分隔；留空 = 不过滤抓全部）</label>
+          <input id="scan_keywords" placeholder="留空则不过滤，或填：求教程, 怎么做的, 同款">
+        </div>
+        <div class="actions" style="margin:0">
+          <label class="switch"><input type="checkbox" id="raw_only"> 只抓取不回复</label>
+        </div>
+        <div class="actions" style="margin:0">
+          <button class="btn" id="btn-scan">2. 抓评论</button>
+        </div>
+        <div class="actions" style="margin:0">
+          <label class="switch"><input type="checkbox" id="headless" checked> 无头模式（不弹浏览器窗）</label>
+        </div>
+      </div>
+
+      <div id="video-box" style="display:none">
+        <h2 style="margin-top:18px;font-size:14px">刷到的视频</h2>
+        <table><thead><tr><th>#</th><th>标题</th><th>链接</th></tr></thead>
+        <tbody id="video-rows"></tbody></table>
+      </div>
+
+      <div id="cand-box" style="display:none">
+        <h2 style="margin-top:18px;font-size:14px">匹配到的评论（填回复内容后点「回复」）</h2>
+        <table><thead><tr><th>#</th><th>用户</th><th>评论</th><th>赞</th><th>回复内容</th><th></th></tr></thead>
+        <tbody id="cand-rows"></tbody></table>
+        <p class="hint">回复只提交一次，失败不会自动重发；同一条评论不会重复回复。</p>
+      </div>
+
+      <h2 style="margin-top:22px;font-size:14px">每日策略回撤流水线</h2>
+      <p class="sub">抓视频+评论 → 识别策略内容 → 调回撤系统回测 → 只把「收益+最大回撤」按模板回复给该用户。</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="actions" style="margin:0">
+          <label class="switch"><input type="checkbox" id="pipe_enabled"> 每日定时</label>
+        </div>
+        <div class="field" style="max-width:130px">
+          <label>每日时间</label>
+          <input id="pipe_time" type="time" value="09:00">
+        </div>
+        <div class="field">
+          <label>搜索词（留空用主题）</label>
+          <input id="pipe_search" placeholder="留空则用上方主题">
+        </div>
+        <div class="field" style="max-width:110px">
+          <label>刷视频条数</label>
+          <input id="pipe_videos" type="number" min="1" max="10" value="3">
+        </div>
+        <div class="field" style="max-width:110px">
+          <label>回复上限</label>
+          <input id="pipe_replies" type="number" min="1" max="20" value="5">
+        </div>
+        <div class="actions" style="margin:0">
+          <label class="switch"><input type="checkbox" id="pipe_dry" checked> 干跑（只回测不实发）</label>
+        </div>
+        <div class="actions" style="margin:0">
+          <button class="btn green" id="btn-pipe">策略回撤流水线</button>
+        </div>
+      </div>
+      <p class="hint">启用「每日定时」并保存配置后，webui 每天在设定时间自动执行（需保持 webui 运行）。回复模板与策略关键词在 config.json 的 pipeline 段配置，只含回撤和收益并附合规提示。</p>
+
+      <div id="pipe-box" style="display:none">
+        <h2 style="margin-top:18px;font-size:14px">流水线结果</h2>
+        <div id="pipe-summary" class="hint"></div>
+        <table><thead><tr><th>#</th><th>用户</th><th>标的</th><th>策略内容</th><th>收益</th><th>最大回撤</th><th>回复内容</th><th>结果</th></tr></thead>
+        <tbody id="pipe-rows"></tbody></table>
+      </div>
+    </section>
+
+    <!-- 日志 -->
+    <section class="card">
+      <div class="card-head"><div class="step">4</div><h2>运行日志</h2></div>
+      <p class="sub">每次操作的结果都会记录在这里。</p>
+      <div class="log-bar"><span></span><span></span><span></span><span class="log-title">LOCAL CONSOLE — mimo-social-agent</span></div>
+      <div id="log">等待操作 ...</div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-status">查看限额状态</button>
+        <button class="btn ghost" id="btn-clear">清空日志</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const logBox = $("log");
+const loginMsg = $("login-msg");
+
+const splitCSV = s => s.split(/[,，]/).map(x => x.trim()).filter(Boolean);
+
+// 默认提示词模板（与 config.json 的 prompts 字段保持一致，用于恢复默认）
+const DEFAULT_PROMPTS = {
+  reply_generation: `你是一名普通的{platform}网友，正在刷与「{topic}」相关的视频评论区。
+人设：{persona}
+回复风格：{style}
+
+请针对下面这条评论写一条回复：
+【评论内容】{comment}
+【评论作者】{user}
+
+硬性要求：
+1. 像真实网友一样自然口语化，严禁客服腔、营销腔、排比句
+2. 紧扣评论内容，有共鸣、有补充或有轻幽默，不跑题不敷衍
+3. 一次只输出回复正文，不要任何前后缀、引号或解释
+4. 严禁出现违禁内容：{avoid}
+5. 严禁留下联系方式、外链或引流信息`,
+  comment_filter: `你是{platform}评论筛选助手。请从下面的评论列表中筛选出与主题「{topic}」相关、值得回复的评论。
+参考关键词（命中任一或语义相关即入选）：{keywords}
+跳过规则：忽略用户 {skip_users} 的评论；点赞数低于 {min_likes} 的评论可忽略。
+
+评论列表（格式：[序号] 用户 | 点赞 | 内容）：
+{comments}
+
+输出要求：只输出 JSON 数组，每项为 {"index": 序号, "reason": "入选理由(10字内)"}，无关评论不要输出，不要任何解释文字。`,
+  keyword_expansion: `你是{platform}话题运营助手。请围绕主题「{topic}」扩展一批用于评论筛选的关键词。
+已有关键词：{keywords}
+
+要求：
+1. 输出 8~12 个简体中文关键词或短语，每行一个
+2. 覆盖同义词、口语化说法、常见提问句式和场景词
+3. 与主题强相关，不要「视频」「好看」等宽泛词
+4. 只输出关键词列表，不要任何解释`,
+};
+
+// 场景配置预设：一键填充关键词 / 人设 / 风格 / 违禁词
+const PRESETS = {
+  tutorial: {
+    label: "知识教程引流",
+    keywords: "求教程, 怎么做的, 想学, 有教程吗, 出教程吗, 同款, 用的什么, 求链接",
+    persona: "热心的技术学习者/知识分享者，乐于助人，说话自然简短",
+    style: "口语化简短回复(15~40字)，可补充一点有用信息或学习建议；不吹捧不推销",
+    avoid: "广告, 微信, 加群, 联系方式, 外链, 代做, 刷量",
+  },
+  seed: {
+    label: "好物种草带货",
+    keywords: "什么牌子, 哪里买, 求链接, 好用吗, 多少钱, 同款, 推荐一下, 值得买吗",
+    persona: "爱分享的真实用户，买过用过，说话接地气",
+    style: "像朋友推荐一样自然(15~40字)，讲真实使用感受；严禁硬广和促销话术",
+    avoid: "广告, 优惠券, 下单, 微信, 加群, 外链, 代购",
+  },
+  fun: {
+    label: "娱乐互动涨粉",
+    keywords: "哈哈哈, 笑死, 太真实了, 同感, 有道理, 求更新, 下一期, 太绝了",
+    persona: "有趣幽默的冲浪网友，爱玩梗但不冒犯",
+    style: "轻松幽默(10~30字)，可以玩梗接梗；不尬不油",
+    avoid: "广告, 微信, 加群, 外链, 攻击, 辱骂, 引战",
+  },
+  brand: {
+    label: "品牌口碑答疑",
+    keywords: "怎么用, 好用吗, 售后, 保修, 什么型号, 有什么区别, 推荐哪款",
+    persona: "懂产品的资深用户/官方助手，耐心专业",
+    style: "专业友好(20~50字)，先回应疑问再给建议；不夸大宣传",
+    avoid: "广告, 微信, 加群, 外链, 绝对化用语, 诋毁同行",
+  },
+};
+
+function log(title, obj) {
+  const time = new Date().toLocaleTimeString();
+  let body = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+  logBox.textContent += `\n[${time}] ${title}\n${body}\n`;
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function loginLog(msg, cls) {
+  loginMsg.textContent = msg;
+  loginMsg.className = cls || "info";
+}
+
+async function api(path, payload) {
+  const opt = payload
+    ? { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload) }
+    : {};
+  const r = await fetch(path, opt);
+  return r.json();
+}
+
+function busy(on) {
+  document.querySelectorAll("#view-app .btn").forEach(b => b.disabled = on);
+}
+
+function showView(name) {
+  $("loading").classList.toggle("hidden", name !== "loading");
+  $("view-login").classList.toggle("hidden", name !== "login");
+  $("view-app").classList.toggle("hidden", name !== "app");
+}
+
+// ---------- 登录态门控 ----------
+let loggedIn = false;
+
+async function checkAuth() {
+  showView("loading");
+  loginLog("");
+  let status = null;
+  try {
+    const r = await api("/api/auth-status");
+    if (r.ok && r.data && r.data.logged_in) status = r.data.logged_in;
+  } catch (e) { /* 保底：未登录 */ }
+  const plat = $("platform").value || "bilibili";
+  const platOk = !!(status && status[plat]);
+  loggedIn = platOk;
+  if (loggedIn) {
+    enterApp(plat);
+  } else {
+    showView("login");
+  }
+}
+
+function enterApp(plat) {
+  const names = { bilibili: "B站", douyin: "抖音" };
+  $("auth-text").textContent = `${names[plat] || plat} · 已登录`;
+  showView("app");
+  loadConfig().catch(e => log("加载配置失败", String(e)));
+}
+
+async function doLogout() {
+  if (!confirm("确定退出登录吗？将清除本平台保存的登录 Cookie。")) return;
+  busy(true);
+  log("退出登录", "正在清除登录 Cookie ...");
+  const r = await api("/api/logout", { platform: $("platform").value });
+  busy(false);
+  loggedIn = false;
+  showView("login");
+  loginLog(r.ok ? "已退出登录，请重新登录后继续使用。" : (r.error || "退出登录失败"), r.ok ? "ok" : "err");
+}
+
+// ---------- 配置 ----------
+async function loadConfig() {
+  const cfg = await api("/api/config");
+  $("platform").value = cfg.platform || "bilibili";
+  $("username").value = (cfg.account && cfg.account.username) || "";
+  $("password").value = (cfg.account && cfg.account.password) || "";
+  $("topic").value = cfg.topic || "";
+  $("keywords").value = (cfg.keywords || []).join(", ");
+  if (!$("scan_keywords").value) $("scan_keywords").value = (cfg.keywords || []).join(", ");
+  $("persona").value = (cfg.persona || "");
+  $("style").value = (cfg.reply_rules && cfg.reply_rules.style) || "";
+  $("avoid").value = ((cfg.reply_rules && cfg.reply_rules.avoid) || []).join(", ");
+  $("max_run").value = (cfg.limits && cfg.limits.max_replies_per_run) || 5;
+  $("max_day").value = (cfg.limits && cfg.limits.max_replies_per_day) || 20;
+  $("interval").value = (cfg.limits && cfg.limits.min_interval_seconds) || 30;
+  const p = cfg.prompts || {};
+  $("prompt-reply").value = p.reply_generation || DEFAULT_PROMPTS.reply_generation;
+  $("prompt-filter").value = p.comment_filter || DEFAULT_PROMPTS.comment_filter;
+  $("prompt-keywords").value = p.keyword_expansion || DEFAULT_PROMPTS.keyword_expansion;
+  const pl = cfg.pipeline || {};
+  $("pipe_enabled").checked = !!pl.enabled;
+  $("pipe_time").value = pl.time || "09:00";
+  $("pipe_search").value = pl.search || "";
+  $("pipe_videos").value = pl.max_videos || 3;
+  $("pipe_replies").value = pl.max_replies_per_run || 5;
+}
+
+function collectConfig(old) {
+  return {
+    ...old,
+    platform: $("platform").value,
+    account: { username: $("username").value.trim(), password: $("password").value },
+    topic: $("topic").value.trim(),
+    keywords: splitCSV($("keywords").value),
+    persona: $("persona").value.trim(),
+    reply_rules: {
+      ...(old.reply_rules || {}),
+      style: $("style").value.trim(),
+      avoid: splitCSV($("avoid").value),
+    },
+    limits: {
+      max_replies_per_run: +$("max_run").value || 5,
+      max_replies_per_day: +$("max_day").value || 20,
+      min_interval_seconds: +$("interval").value || 30,
+    },
+    skip: old.skip || { users: [], min_comment_likes: 0 },
+    pipeline: {
+      ...(old.pipeline || {}),
+      enabled: $("pipe_enabled").checked,
+      time: $("pipe_time").value || "09:00",
+      search: $("pipe_search").value.trim(),
+      max_videos: +$("pipe_videos").value || 3,
+      max_replies_per_run: +$("pipe_replies").value || 5,
+    },
+    prompts: {
+      reply_generation: $("prompt-reply").value.trim() || DEFAULT_PROMPTS.reply_generation,
+      comment_filter: $("prompt-filter").value.trim() || DEFAULT_PROMPTS.comment_filter,
+      keyword_expansion: $("prompt-keywords").value.trim() || DEFAULT_PROMPTS.keyword_expansion,
+    },
+  };
+}
+
+async function saveConfig() {
+  const old = await api("/api/config");
+  const r = await api("/api/config", { config: collectConfig(old) });
+  log("保存配置", r.ok ? "已保存到 config.json" : r);
+  return r.ok;
+}
+
+// ---------- 登录 ----------
+async function doLogin(fill) {
+  const btns = [$("btn-login"), $("btn-login-manual")];
+  btns.forEach(b => b.disabled = true);
+  loginLog("正在保存账号并打开浏览器，请在弹出窗口中完成登录（含滑块/验证码）...", "info");
+  try {
+    if (fill) {
+      const old = await api("/api/config");
+      const saved = await api("/api/config", { config: collectConfig(old) });
+      if (!saved.ok) { loginLog("保存配置失败，请重试", "err"); return; }
+    }
+    const r = await api("/api/login", { platform: $("platform").value, fill });
+    const ok = r.ok && r.data && r.data.logged_in;
+    if (ok) {
+      loginLog("登录成功，正在进入控制台 ...", "ok");
+      loggedIn = true;
+      enterApp($("platform").value);
+      log("登录", r.data);
+    } else {
+      const detail = (r.data && r.data.detail) || r.error || r.raw || "未检测到登录态";
+      loginLog(detail, "err");
+    }
+  } finally {
+    btns.forEach(b => b.disabled = false);
+  }
+}
+
+// ---------- 运行 ----------
+async function doBrowse() {
+  if (!(await saveConfig())) return;
+  busy(true);
+  log("刷视频", `平台=${$("platform").value} 搜索=${$("topic").value || "推荐流"}`);
+  const r = await api("/api/browse", {
+    platform: $("platform").value, search: $("topic").value.trim(),
+    limit: +$("browse_limit").value || 5, headless: $("headless").checked,
+  });
+  busy(false);
+  if (!r.ok) { log("刷视频失败", r.error || r.raw); return; }
+  const videos = (r.data && r.data.videos) || [];
+  log("刷到视频", videos);
+  const box = $("video-box"), rows = $("video-rows");
+  rows.innerHTML = "";
+  videos.forEach((v, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${i + 1}</td><td>${v.title || ""}</td>
+      <td><button class="btn ghost" data-url="${v.url}">选它抓评论</button></td>`;
+    tr.querySelector("button").onclick = () => {
+      $("video_url").value = v.url;
+      doScan();
+    };
+    rows.appendChild(tr);
+  });
+  box.style.display = videos.length ? "" : "none";
+}
+
+async function doScan() {
+  const url = $("video_url").value.trim();
+  if (!url) { log("抓评论", "请先填写或选择视频链接"); return; }
+  if (!(await saveConfig())) return;
+  const raw = $("raw_only").checked;
+  const kws = $("scan_keywords").value.trim();
+  busy(true);
+  log("抓评论", `${url}${raw ? "（只抓取不回复模式）" : ""}${kws ? `（关键词筛选：${kws}）` : "（不过滤，抓全部）"}`);
+  const r = await api("/api/scan", {
+    platform: $("platform").value, url, raw,
+    max: +$("scan_max").value || 10,
+    keywords: kws,
+    headless: $("headless").checked,
+  });
+  busy(false);
+  if (!r.ok) { log("抓评论失败", r.error || r.raw); return; }
+  const matched = (r.data && r.data.matched) || [];
+  log("抓取结果", `共 ${(r.data || {}).total_comments || 0} 条评论，取得 ${matched.length} 条`, matched);
+  const box = $("cand-box"), rows = $("cand-rows");
+  rows.innerHTML = "";
+  matched.forEach(c => {
+    const tr = document.createElement("tr");
+    if (raw) {
+      tr.innerHTML = `<td>${c.index}</td><td>${c.user || ""}</td>
+        <td>${(c.text || "").slice(0, 120)}</td><td>${c.likes || 0}</td>
+        <td colspan="2" style="color:var(--muted)">仅抓取</td>`;
+    } else {
+      tr.innerHTML = `<td>${c.index}</td><td>${c.user || ""}</td>
+        <td>${(c.text || "").slice(0, 80)}</td><td>${c.likes || 0}</td>
+        <td><input data-idx="${c.index}" placeholder="输入回复内容" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px"></td>
+        <td><button class="btn green">回复</button></td>`;
+      tr.querySelector("button").onclick = () => doReply(tr, c);
+    }
+    rows.appendChild(tr);
+  });
+  box.style.display = matched.length ? "" : "none";
+}
+
+async function doReply(tr, c) {
+  const input = tr.querySelector("input");
+  const text = input.value.trim();
+  if (!text) { log("回复", "请先填写回复内容"); return; }
+  busy(true);
+  log("回复中", `#${c.index} ${c.user}: ${c.text}\n→ ${text}`);
+  const r = await api("/api/reply", {
+    platform: $("platform").value, index: c.index, text,
+    headless: $("headless").checked,
+  });
+  busy(false);
+  const res = r.ok ? (r.data || {}) : { result: { status: "failed", detail: r.error || r.raw } };
+  const st = (res.result || {}).status || "?";
+  const pill = st === "sent" ? "ok" : st === "unknown" ? "warn" : "err";
+  log("回复结果", res);
+  const cell = tr.lastElementChild;
+  cell.innerHTML = `<span class="pill ${pill}">${st}</span>`;
+  input.disabled = true;
+}
+
+// ---------- 策略回撤流水线 ----------
+async function doPipeline() {
+  if (!(await saveConfig())) return;
+  const dry = $("pipe_dry").checked;
+  const search = $("pipe_search").value.trim() || $("topic").value.trim();
+  busy(true);
+  log("策略回撤流水线", `${dry ? "干跑（只回测不实发）" : "实发模式"} 搜索=${search || "推荐流"}`);
+  const r = await api("/api/pipeline", {
+    platform: $("platform").value, search,
+    max_videos: +$("pipe_videos").value || 3,
+    max_replies: +$("pipe_replies").value || 5,
+    dry_run: dry, headless: $("headless").checked,
+  });
+  busy(false);
+  if (!r.ok) { log("流水线失败", r.error || r.raw); return; }
+  const d = r.data || {};
+  log("流水线完成", d);
+  $("pipe-summary").textContent =
+    `视频 ${d.videos || 0} 个｜评论 ${d.comments || 0} 条｜策略命中 ${d.strategy_hits || 0} 条｜完成回测 ${d.backtested || 0} 条｜${dry ? "待回复" : "已回复"} ${d.replied || 0} 条`;
+  const rows = $("pipe-rows");
+  rows.innerHTML = "";
+  (d.items || []).forEach((it, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${i + 1}</td><td>${it.user || ""}</td><td>${it.symbol || "-"}</td>
+      <td>${(it.idea || "").slice(0, 40)}</td>
+      <td>${it.total_return || "-"}</td><td>${it.max_drawdown || "-"}</td>
+      <td>${(it.reply || "").slice(0, 60)}</td>
+      <td>${it.result || it.skipped || ""}</td>`;
+    rows.appendChild(tr);
+  });
+  $("pipe-box").style.display = (d.items || []).length ? "" : "none";
+}
+
+// ---------- 预设与提示词 ----------
+function applyPreset() {
+  const key = $("preset").value;
+  const p = PRESETS[key];
+  if (!p) { log("套用预设", "请先在「场景配置预设」中选择一个场景"); return; }
+  $("keywords").value = p.keywords;
+  $("persona").value = p.persona;
+  $("style").value = p.style;
+  $("avoid").value = p.avoid;
+  log("套用预设", `${p.label}：已填充关键词 / 人设 / 回复风格 / 违禁词（话题与限额保持不变），点「保存配置」写入生效`);
+}
+
+function fillTemplate(tpl, map) {
+  return tpl.replace(/\{(\w+)\}/g, (m, k) => (k in map ? map[k] : m));
+}
+
+function generatePrompt() {
+  const target = $("gen-target").value;
+  const names = { reply: "回复生成", filter: "评论筛选", keywords: "关键词扩展" };
+  const tpl = target === "reply" ? $("prompt-reply").value
+    : target === "filter" ? $("prompt-filter").value
+    : $("prompt-keywords").value;
+  const map = {
+    platform: $("platform").value === "douyin" ? "抖音" : "B站",
+    topic: $("topic").value.trim() || "（未填写话题）",
+    persona: $("persona").value.trim() || "（未填写人设）",
+    style: $("style").value.trim() || "（未填写风格）",
+    avoid: splitCSV($("avoid").value).join("、") || "无",
+    keywords: splitCSV($("keywords").value).join("、") || "（未填写关键词）",
+    comment: $("gen-comment").value.trim() || "（此处填入要回复的评论内容）",
+    user: "（评论作者）",
+    comments: "（此处粘贴评论列表）",
+    skip_users: "（无）",
+    min_likes: "0",
+  };
+  $("gen-output").value = fillTemplate(tpl, map);
+  log("一键生成提示词", `已生成「${names[target]}」，点「复制生成结果」即可使用`);
+}
+
+async function copyGenerated() {
+  const text = $("gen-output").value;
+  if (!text) { log("复制", "请先点击「一键生成提示词」"); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    log("复制", "生成结果已复制到剪贴板");
+  } catch (e) {
+    $("gen-output").select();
+    document.execCommand("copy");
+    log("复制", "生成结果已复制到剪贴板");
+  }
+}
+
+function resetPrompts() {
+  $("prompt-reply").value = DEFAULT_PROMPTS.reply_generation;
+  $("prompt-filter").value = DEFAULT_PROMPTS.comment_filter;
+  $("prompt-keywords").value = DEFAULT_PROMPTS.keyword_expansion;
+  log("恢复默认模板", "已恢复为默认提示词，点「保存配置」写入 config.json");
+}
+
+// ---------- 状态 ----------
+async function showStatus() {
+  const r = await api("/api/status");
+  log("限额状态", r.ok ? (r.data || r.raw) : (r.error || r.raw));
+}
+
+$("btn-save").onclick = saveConfig;
+$("btn-preset").onclick = applyPreset;
+$("btn-gen").onclick = generatePrompt;
+$("btn-copy-gen").onclick = copyGenerated;
+$("btn-reset-prompts").onclick = resetPrompts;
+$("btn-login").onclick = () => doLogin(true);
+$("btn-login-manual").onclick = () => doLogin(false);
+$("btn-logout").onclick = doLogout;
+$("btn-browse").onclick = doBrowse;
+$("btn-scan").onclick = doScan;
+$("btn-pipe").onclick = doPipeline;
+$("btn-status").onclick = showStatus;
+$("btn-clear").onclick = () => { logBox.textContent = "等待操作 ..."; };
+
+// 启动：检测登录态，决定显示登录页还是主应用
+checkAuth();
+</script>
+</body>
+</html>

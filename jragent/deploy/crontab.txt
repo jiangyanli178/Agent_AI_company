@@ -1,0 +1,29 @@
+# 定时任务示例（服务器时区必须先设为 Asia/Shanghai）
+# 安装：crontab -e 后粘贴，路径按实际部署位置调整
+
+# 每个交易日 18:00 拉取 T-1 前复权日线
+0 18 * * 1-5  cd /opt/jragent/backend && /opt/venv/bin/python scripts/fetch_bars.py >> logs/bars.log 2>&1
+
+# 每个交易日 18:30 生成观察项信号（与回测共用同一引擎）
+30 18 * * 1-5 cd /opt/jragent/backend && /opt/venv/bin/python scripts/gen_signals.py >> logs/signals.log 2>&1
+
+# 每个交易日 18:35 扣观察项日租，余额不足自动暂停
+35 18 * * 1-5 cd /opt/jragent/backend && /opt/venv/bin/python scripts/charge_deploy.py >> logs/charge.log 2>&1
+
+# 每日 02:00 账目一致性自查
+0 2 * * *     cd /opt/jragent/backend && /opt/venv/bin/python scripts/check_ledger.py >> logs/ledger.log 2>&1
+
+# 每周一 08:00 生成经营周报
+0 8 * * 1     cd /opt/jragent/backend && /opt/venv/bin/python scripts/weekly_report.py >> logs/weekly.log 2>&1
+
+# 每日 03:00 数据库备份
+0 3 * * *     cd /opt/jragent/backend && /opt/venv/bin/python scripts/backup.py >> logs/backup.log 2>&1
+
+# ---------------------------------------------------------
+# Windows 本机开发时不要用 cron，改用「任务计划程序」，
+# 或者干脆在演示前手动各跑一次：
+#   python scripts/fetch_bars.py
+#   python scripts/check_ledger.py
+#   python scripts/weekly_report.py
+#   python scripts/backup.py
+# ---------------------------------------------------------

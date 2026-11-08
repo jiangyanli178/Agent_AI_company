@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>量化策略研究工作室 · Agent 调度与功能详解</title>
+<style>
+  :root {
+    --bg: #0b0f1e; --card: rgba(255,255,255,.04); --border: rgba(255,255,255,.09);
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #6366f1; --accent2: #22d3ee;
+    --green: #34d399; --red: #f87171; --yellow: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.75; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 15% 10%, rgba(99,102,241,.15) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 85% 80%, rgba(34,211,238,.1) 0%, transparent 60%);
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  /* Header */
+  .hero { text-align: center; padding: 48px 0 36px; }
+  .hero h1 {
+    font-size: 2.2em; font-weight: 800; margin-bottom: 12px;
+    background: linear-gradient(135deg, #a5b4fc, #6366f1, #22d3ee);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p { color: var(--muted); font-size: 1.05em; max-width: 720px; margin: 0 auto; }
+  .hero .tag {
+    display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: .82em;
+    border: 1px solid rgba(99,102,241,.4); color: #a5b4fc; margin: 6px 4px 0;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+    padding: 28px 32px; margin-bottom: 28px; backdrop-filter: blur(12px);
+  }
+  .card h2 {
+    font-size: 1.45em; margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+  }
+  .card h2 .icon {
+    width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.1em; flex-shrink: 0;
+  }
+  .card h3 { font-size: 1.1em; margin: 20px 0 10px; color: #c7d2fe; }
+  .card p, .card li { color: #cbd5e1; font-size: .93em; }
+  .card ul, .card ol { padding-left: 1.5em; margin: 8px 0; }
+  .card li { margin: 4px 0; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .88em; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: #a5b4fc; font-weight: 600; font-size: .85em; text-transform: uppercase; letter-spacing: .05em; background: rgba(99,102,241,.08); }
+  tr:hover td { background: rgba(99,102,241,.06); }
+  td code { background: rgba(99,102,241,.15); padding: 2px 7px; border-radius: 5px; font-size: .92em; color: #c7d2fe; }
+
+  /* Code blocks */
+  pre {
+    background: rgba(0,0,0,.35); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 22px; overflow-x: auto; margin: 14px 0; font-size: .84em; line-height: 1.65;
+  }
+  pre code { font-family: "Cascadia Code", "Fira Code", Consolas, monospace; color: #a5b4fc; }
+  pre .kw { color: #c084fc; } pre .fn { color: #67e8f9; } pre .cm { color: #64748b; }
+  pre .str { color: #86efac; } pre .num { color: #fbbf24; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex; flex-direction: column; gap: 0; margin: 18px 0;
+  }
+  .flow-step {
+    display: flex; align-items: flex-start; gap: 16px; position: relative;
+  }
+  .flow-dot {
+    width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: .82em; font-weight: 700; flex-shrink: 0;
+    border: 2px solid var(--accent); background: rgba(99,102,241,.15); color: #a5b4fc;
+    z-index: 1;
+  }
+  .flow-line {
+    width: 2px; height: 28px; background: linear-gradient(to bottom, var(--accent), transparent);
+    margin-left: 20px; flex-shrink: 0;
+  }
+  .flow-body { padding: 8px 0 4px; flex: 1; }
+  .flow-body .title { font-weight: 700; font-size: .98em; color: #e2e8f0; }
+  .flow-body .desc { color: var(--muted); font-size: .86em; margin-top: 2px; }
+
+  /* Architecture layers */
+  .layers { display: flex; gap: 14px; margin: 18px 0; flex-wrap: wrap; }
+  .layer {
+    flex: 1; min-width: 200px; border-radius: 14px; padding: 18px 20px;
+    border: 1px solid var(--border); background: rgba(99,102,241,.07);
+  }
+  .layer .layer-title { font-weight: 700; font-size: .95em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .layer .layer-desc { font-size: .84em; color: var(--muted); }
+  .layer.l1 { border-color: rgba(99,102,241,.35); background: rgba(99,102,241,.1); }
+  .layer.l2 { border-color: rgba(34,211,238,.35); background: rgba(34,211,238,.08); }
+  .layer.l3 { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); }
+
+  /* Badge */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .78em;
+    font-weight: 600; vertical-align: middle;
+  }
+  .badge.blue { background: rgba(99,102,241,.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,.3); }
+  .badge.green { background: rgba(52,211,153,.15); color: #86efac; border: 1px solid rgba(52,211,153,.3); }
+  .badge.red { background: rgba(248,113,113,.15); color: #fca5a5; border: 1px solid rgba(248,113,113,.3); }
+  .badge.yellow { background: rgba(251,191,36,.15); color: #fcd34d; border: 1px solid rgba(251,191,36,.3); }
+
+  /* Gate grid */
+  .gate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 14px 0; }
+  .gate-item {
+    padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border);
+    background: rgba(255,255,255,.03); font-size: .86em;
+  }
+  .gate-item .g-no { font-weight: 800; color: var(--accent); font-size: 1.1em; }
+  .gate-item .g-title { font-weight: 600; color: #e2e8f0; margin: 3px 0; }
+  .gate-item .g-desc { color: var(--muted); font-size: .88em; }
+
+  /* Agent card */
+  .agent-card {
+    border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; margin: 12px 0;
+    background: rgba(255,255,255,.025);
+  }
+  .agent-card .a-name {
+    font-weight: 700; font-size: 1.05em; display: flex; align-items: center; gap: 10px;
+  }
+  .agent-card .a-role { color: var(--muted); font-size: .87em; margin: 6px 0 10px; }
+  .agent-card .a-io { display: flex; gap: 20px; flex-wrap: wrap; margin: 8px 0; }
+  .agent-card .a-io > div { font-size: .85em; }
+  .agent-card .a-io .label { color: var(--accent2); font-weight: 600; margin-bottom: 2px; }
+
+  .highlight {
+    border-left: 3px solid var(--accent); padding: 12px 18px; margin: 14px 0;
+    background: rgba(99,102,241,.08); border-radius: 0 10px 10px 0; font-size: .9em;
+  }
+  .highlight.warn { border-color: var(--yellow); background: rgba(251,191,36,.07); }
+  .highlight.danger { border-color: var(--red); background: rgba(248,113,113,.07); }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+  .toc a {
+    padding: 8px 18px; border-radius: 10px; text-decoration: none; font-size: .88em;
+    border: 1px solid var(--border); color: #a5b4fc; background: rgba(99,102,241,.07);
+    transition: all .2s;
+  }
+  .toc a:hover { background: rgba(99,102,241,.18); border-color: var(--accent); }
+
+  .section-icon { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
+
+  @media (max-width: 700px) {
+    .container { padding: 20px 14px 60px; }
+    .hero h1 { font-size: 1.5em; }
+    .layers { flex-direction: column; }
+    .card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+  <h1>量化策略研究工作室</h1>
+  <p>MiMo-OPC 三层架构 · Agent 调度与功能全景详解</p>
+  <div>
+    <span class="tag">执行层 · 11 个专职 Agent</span>
+    <span class="tag">编排层 · COO</span>
+    <span class="tag">中枢层 · Context Hub + 9 道闸门</span>
+    <span class="tag">全部留痕 · 可回滚</span>
+  </div>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <a href="#arch">架构总览</a>
+  <a href="#agents">Agent 职责</a>
+  <a href="#dispatch">调度流程</a>
+  <a href="#gates">9 道闸门</a>
+  <a href="#audit">风控审计域</a>
+  <a href="#data">数据源降级链</a>
+  <a href="#hub">中枢与留痕</a>
+  <a href="#multi">多股组合</a>
+  <a href="#api">前端 API</a>
+</div>
+
+<!-- ==================== 架构总览 ==================== -->
+<section class="card" id="arch">
+  <h2><span class="section-icon" style="background:rgba(99,102,241,.18)">🏗</span>三层架构总览</h2>
+  <p>系统采用 <strong>MiMo-OPC 三层架构</strong>：执行层负责专业分工执行，编排层负责全流程调度与闸门把控，中枢层负责数据留痕与人工决策。三条铁律贯穿始终：<strong>单一事实来源、不可逆动作过闸、全部留痕可回滚</strong>。</p>
+
+  <div class="layers">
+    <div class="layer l1">
+      <div class="layer-title"><span class="badge blue">执行层</span> 专职 Agent 团队</div>
+      <div class="layer-desc">
+        11 个 Agent 各司其职：数据收集师、策略翻译官、量化工程师、执行风险审计员、模型风险审计员、报告设计、评审 Agent、合规官、报价官、订单员、收银员。Agent 之间互不直接调用，全部经由 COO 调度。</div>
+    </div>
+    <div class="layer l2">
+      <div class="layer-title"><span class="badge green">编排层</span> COO Agent</div>
+      <div class="layer-desc">
+        全流程编排中枢。调度 9 步闭环：报价→建单→收款→数据采集→策略翻译→回测→风控审计→报告成稿→合规终检→交付回执。管理 3 轮审计否决升级机制与 3 轮评审打回机制。</div>
+    </div>
+    <div class="layer l3">
+      <div class="layer-title"><span class="badge yellow">中枢层</span> Context Hub + 闸门</div>
+      <div class="layer-desc">
+        9 个卷宗（00-charter ~ 08-review）作为单一事实来源；9 道人工闸门把控不可逆动作（定价、收款、发布、催款等）；07-log.md 全量动作留痕，支持 mark_stale 回滚。</div>
+    </div>
+  </div>
+
+  <h3>五条合规红线</h3>
+  <div class="gate-grid">
+    <div class="gate-item"><div class="g-no">红线 1</div><div class="g-title">不代客理财</div><div class="g-desc">Agent 永不碰资金与交易</div></div>
+    <div class="gate-item"><div class="g-no">红线 2</div><div class="g-title">不荐股</div><div class="g-desc">仅提供研究服务</div></div>
+    <div class="gate-item"><div class="g-no">红线 3</div><div class="g-title">必带风险揭示</div><div class="g-desc">免责声明 + 最大回撤揭示</div></div>
+    <div class="gate-item"><div class="g-no">红线 4</div><div class="g-title">业绩不造假</div><div class="g-desc">只用真实公开数据，降级须披露</div></div>
+    <div class="gate-item"><div class="g-no">红线 5</div><div class="g-title">可复现</div><div class="g-desc">快照 + 规格 JSON + 重跑脚本入 09-backtest/</div></div>
+  </div>
+</section>
+
+<!-- ==================== Agent 职责 ==================== -->
+<section class="card" id="agents">
+  <h2><span class="section-icon" style="background:rgba(34,211,238,.18)">🤖</span>Agent 职责详解</h2>
+  <p>所有 Agent 继承 <code style="background:rgba(99,102,241,.15);padding:2px 8px;border-radius:5px">Agent</code> 基类，持有 ContextHub 引用，全部动作通过 <code style="background:rgba(99,102,241,.15);padding:2px 8px;border-radius:5px">_log()</code> 留痕至 07-log.md。</p>
+
+  <!-- 前置：商业链 -->
+  <h3>📦 商业前置链（报价 → 建单 → 收款）</h3>
+
+  <div class="agent-card">
+    <div class="a-name">💰 报价官 <span class="badge blue">Quoter</span></div>
+    <div class="a-role">定价合规校验：报价必须落在定价带内，定价表入 01-market.md</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>quote(product, amount) → dict</code></div>
+      <div><div class="label">输出</div>product / amount / currency:"CNY" / terms</div>
+    </div>
+    <table>
+      <tr><th>产品</th><th>定价带（¥）</th></tr>
+      <tr><td>标准策略回测报告</td><td><code>300 ~ 1000</code></td></tr>
+      <tr><td>策略体检</td><td><code>500（固定）</code></td></tr>
+      <tr><td>模拟盘跟踪订阅</td><td><code>99 ~ 299</code></td></tr>
+    </table>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">📋 订单员 <span class="badge blue">OrderClerk</span></div>
+    <div class="a-role">创建订单记录，状态标记「已建单」</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>create_order(order_id, quote, client) → dict</code></div>
+      <div><div class="label">输出</div>order_id / client / product / amount / status</div>
+    </div>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">🧾 收银员 <span class="badge yellow">Cashier</span></div>
+    <div class="a-role">仅生成收款账单，实际收款由老板执行/确认（闸门⑥）。<strong>Agent 永不碰资金</strong></div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>generate_invoice(order) → dict</code></div>
+      <div><div class="label">输出</div>invoice_no:"INV-{order_id}" / amount / pay_link / note</div>
+    </div>
+  </div>
+
+  <!-- 研究链 -->
+  <h3>🔬 研究执行链（数据 → 策略 → 回测 → 审计 → 报告）</h3>
+
+  <div class="agent-card">
+    <div class="a-name">📊 数据收集师 <span class="badge green">DataCollector</span></div>
+    <div class="a-role">国内直连真实行情采集，四级降级链保障数据可得性；快照落盘可复现</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>collect(symbol, period="2y") → DataSnapshot</code></div>
+      <div><div class="label">输出</div>snapshot_id / dates / closes / source / pool_definition / meta</div>
+    </div>
+    <div class="highlight">降级链：<strong>AKShare（东财 push2）→ BaoStock → yfinance → 合成数据</strong>。每一级失败自动降级，降级原因写入日志与快照 meta，报告「回测假设」章加合成数据警告（红线 4）。</div>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">🧠 策略翻译官 <span class="badge green">StrategyTranslator</span></div>
+    <div class="a-role">自然语言策略想法 → 结构化策略规格（StrategySpec），含完整解读与微调指引</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>translate(idea) → StrategySpec</code></div>
+      <div><div class="label">输出</div>kind / fast / slow / stop_loss / position + interpretation 字典</div>
+    </div>
+    <ul>
+      <li><strong>规则识别</strong>：含「突破」→ breakout；含「均线/金叉/死叉/交叉」→ ma_cross</li>
+      <li><strong>参数解析</strong>：支持 <code>10/40</code>、<code>10x40</code>、<code>10日和40日</code> 等写法；fast≥slow 自动对调</li>
+      <li><strong>interpretation 字典</strong>：clarity（明确/默认计数）/ items（原文线索→解读→确定性）/ params（参数→取值→来源→如何微调）/ assumptions（满仓、成本 0.1%/边、t+1、只做多）/ to_confirm（待确认项）</li>
+    </ul>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">⚙️ 量化工程师 <span class="badge green">QuantEngineer</span></div>
+    <div class="a-role">回测引擎调用 + 可复现资产生成（规格 JSON + 重跑脚本）</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>build_and_run(spec, snap, order_id, asset_prefix) → BacktestResult</code></div>
+      <div><div class="label">多股版</div><code>build_and_run_portfolio(spec, snaps, order_id) → BacktestResult</code></div>
+    </div>
+    <ul>
+      <li>产出 <code>09-backtest/&lt;order_id&gt;/strategy_spec.json</code> + <code>reproduce.py</code>（红线 5 可复现）</li>
+      <li>多股每股独立子目录 <code>09-backtest/&lt;order_id&gt;/&lt;asset_prefix&gt;/</code></li>
+    </ul>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">🔍 执行风险审计员 <span class="badge red">ExecutionRiskAuditor</span></div>
+    <div class="a-role">审计域：<strong>未来函数（数据泄漏）+ 参数敏感性</strong>，产出完整详细结论</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>audit(spec, snap, result) → dict</code></div>
+      <div><div class="label">输出</div>agent / scope / verdict / checks / data / conclusion_md</div>
+    </div>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">🔍 模型风险审计员 <span class="badge red">ModelRiskAuditor</span></div>
+    <div class="a-role">审计域：<strong>过拟合（样本内外）+ 幸存者偏差</strong>，产出完整详细结论</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>audit(spec, snap, result) → dict</code></div>
+      <div><div class="label">输出</div>agent / scope / verdict / checks / data / conclusion_md</div>
+    </div>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">📝 报告设计 <span class="badge green">ReportDesigner</span></div>
+    <div class="a-role">回测结果 + 审计结论 → 9 章标准报告（含策略解读与微调指引板块）</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>render(result, audit, out_dir, order_id) → Path</code></div>
+      <div><div class="label">组合版</div><code>render_portfolio(...) → Path</code></div>
+    </div>
+    <p>DoD 9 章：摘要 / 策略解读与微调指引 / 策略规格 / 回测假设 / 回测结果 / 风险揭示 / 风控审计 / 可复现说明 / 免责声明与风险揭示</p>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">✅ 评审 Agent <span class="badge yellow">Reviewer</span></div>
+    <div class="a-role">报告质量评审：DoD 章节齐全性 + 指标完整性 + 审计否决拦截</div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>review(report_text, result, audit) → (bool, list[str])</code></div>
+      <div><div class="label">判定</div>9 章各有 ## 标题 / max_drawdown 非缺失 / audit≠否决</div>
+    </div>
+  </div>
+
+  <div class="agent-card">
+    <div class="a-name">⚖️ 合规官 <span class="badge yellow">ComplianceOfficer</span></div>
+    <div class="a-role">合规终检：金融广告禁词扫描 + 免责声明/风险揭示齐全性，<strong>一票否决</strong></div>
+    <div class="a-io">
+      <div><div class="label">核心方法</div><code>check(report_text) → dict</code></div>
+      <div><div class="label">输出</div>passed / violations / has_disclaimer / has_drawdown_risk</div>
+    </div>
+    <p>禁词 13 个：保本 / 稳赚 / 收益保证 / 必涨 / 零风险 / 荐股 / 代客理财 / 代客下单 / 包赚 / 翻倍 / 内部消息 等</p>
+  </div>
+</section>
+
+<!-- ==================== 调度流程 ==================== -->
+<section class="card" id="dispatch">
+  <h2><span class="section-icon" style="background:rgba(52,211,153,.18)">🔄</span>COO 调度流程（run_first_order）</h2>
+  <p>COO 持有全部 10 个下属 Agent 实例，按固定顺序调度。单股流程 9 步闭环：</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot">1</div>
+      <div class="flow-body">
+        <div class="title">开工 · 留痕</div>
+        <div class="desc">COO.log("开工")，记录订单参数</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">2</div>
+      <div class="flow-body">
+        <div class="title">报价 → 闸门⑤</div>
+        <div class="desc">Quoter.quote 校验定价带（300~1000 ¥）→ GateKeeper.checkpoint(5) 价格与条款人工审批</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">3</div>
+      <div class="flow-body">
+        <div class="title">建单 + 收款单 → 闸门⑥</div>
+        <div class="desc">OrderClerk.create_order → Cashier.generate_invoice → GateKeeper.checkpoint(6) 真实收付款（Agent 永不碰资金）</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">4</div>
+      <div class="flow-body">
+        <div class="title">多股分支判断</div>
+        <div class="desc">parse_symbols(symbol)：单股→步骤 5 继续；多股→ _run_multi_research 分支</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">5</div>
+      <div class="flow-body">
+        <div class="title">数据采集 + 策略翻译</div>
+        <div class="desc">DataCollector.collect（四级降级链）→ DataSnapshot；StrategyTranslator.translate → StrategySpec</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">6</div>
+      <div class="flow-body">
+        <div class="title">回测 + 风控审计（≤3 轮）</div>
+        <div class="desc">QuantEngineer.build_and_run → 执行风险审计员 + 模型风险审计员 → merge_risk_audits 聚合；否决→定向打回量化工程师；3 轮仍否决→ AuditRejected 升级老板</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">7</div>
+      <div class="flow-body">
+        <div class="title">报告成稿 + 评审循环（≤3 轮）</div>
+        <div class="desc">ReportDesigner.render → Reviewer.review（DoD 9 章 + 指标 + 审计非否决）；不过→旧稿 rename 版本留痕后重跑；3 轮不过→升级老板</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">8</div>
+      <div class="flow-body">
+        <div class="title">合规终检（一票否决）</div>
+        <div class="desc">ComplianceOfficer.check：禁词扫描 + 免责声明/风险揭示 + 最大回撤揭示</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">9</div>
+      <div class="flow-body">
+        <div class="title">QC + 交付回执 + 入账</div>
+        <div class="desc">metrics 五指标齐全 + 09-backtest 资产存在 → _book_order 幂等入账（orders.json + 06-finance.md）→ receipt → 05-pipeline.md 留痕</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>循环与升级机制</h3>
+  <table>
+    <tr><th>机制</th><th>最大轮数</th><th>打回对象</th><th>超限处理</th></tr>
+    <tr><td>风控审计循环</td><td><code>3 轮</code></td><td>量化工程师（定向修改参数/逻辑）</td><td><span class="badge red">AuditRejected</span> 升级老板，报告不出稿</td></tr>
+    <tr><td>报告评审循环</td><td><code>3 轮</code></td><td>报告设计（重写缺陷章节）</td><td>断言失败升级老板</td></tr>
+    <tr><td>合规终检</td><td><code>1 次</code></td><td>—</td><td><span class="badge red">一票否决</span>，不出稿</td></tr>
+  </table>
+</section>
+
+<!-- ==================== 9 道闸门 ==================== -->
+<section class="card" id="gates">
+  <h2><span class="section-icon" style="background:rgba(251,191,36,.18)">🚧</span>9 道人工闸门</h2>
+  <p>不可逆动作必须过闸。GateKeeper 支持 <code>auto</code>（演示自动通过）/ <code>manual</code>（老板交互 y/n 拍板）两种模式，均写 07-log.md 留痕。</p>
+
+  <div class="gate-grid">
+    <div class="gate-item"><div class="g-no">闸门 ①</div><div class="g-title">做什么生意</div><div class="g-desc">立案方向审批（代码中无自动调用点，流程外老板决策）</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ②</div><div class="g-title">定名 + 合规红项</div><div class="g-desc">品牌命名、合规红线审批</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ③</div><div class="g-title">卖什么 / 承诺范围</div><div class="g-desc">产品定义 + 免责声明审批</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ④</div><div class="g-title">对外公开发布</div><div class="g-desc">对外发布审批</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ⑤</div><div class="g-title">价格与条款</div><div class="g-desc">报价审批 · run_first_order 自动调用</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ⑥</div><div class="g-title">真实收付款</div><div class="g-desc">资金动作审批 · Agent 永不碰资金</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ⑦</div><div class="g-title">投诉 / 退款 / 舆情</div><div class="g-desc">危机处理审批</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ⑧</div><div class="g-title">周报决策 / 催款</div><div class="g-desc">weekly_report 自动调用</div></div>
+    <div class="gate-item"><div class="g-no">闸门 ⑨</div><div class="g-title">下一步战略</div><div class="g-desc">战略方向审批</div></div>
+  </div>
+
+  <div class="highlight warn">代码自动调用点仅 3 处：<strong>闸门⑤</strong>（报价审批）、<strong>闸门⑥</strong>（收款确认）、<strong>闸门⑧</strong>（周报决策）。其余闸门为老板在业务流程外手动使用。</div>
+</section>
+
+<!-- ==================== 风控审计域 ==================== -->
+<section class="card" id="audit">
+  <h2><span class="section-icon" style="background:rgba(248,113,113,.18)">🛡</span>风控审计域（两大审计 Agent）</h2>
+  <p>风控审计拆分为两个独立 Agent，各自产出<strong>完整而详细的结论</strong>（conclusion_md），由 <code>merge_risk_audits()</code> 聚合为下游兼容结构。</p>
+
+  <h3>执行风险审计域 · ExecutionRiskAuditor</h3>
+  <table>
+    <tr><th>检查项</th><th>判定标准</th><th>实测指标</th></tr>
+    <tr>
+      <td><strong>未来函数（数据泄漏）</strong> <span class="badge red">红线</span></td>
+      <td>成交至少滞后信号 1 根K线（execution_lag ≥ 1）；组合版附加「日期交集对齐、不外推」</td>
+      <td><code>execution_lag</code> / 对齐方式</td>
+    </tr>
+    <tr>
+      <td><strong>参数敏感性</strong></td>
+      <td>夏普极差 ≤ 1.5 <strong>且</strong> 正夏普参数组合占比 ≥ 60%</td>
+      <td><code>sensitivity_spread</code> / <code>sensitivity_rows</code>（fast±3 × slow±5 共 9 组网格）</td>
+    </tr>
+  </table>
+
+  <h3>模型风险审计域 · ModelRiskAuditor</h3>
+  <table>
+    <tr><th>检查项</th><th>判定标准</th><th>实测指标</th></tr>
+    <tr>
+      <td><strong>过拟合（样本内外）</strong></td>
+      <td>前 70% IS / 后 30% OOS：oos_sharpe ≥ 0.3 × is_sharpe <strong>且</strong> oos_total_return > -15%</td>
+      <td><code>is_sharpe</code> / <code>oos_sharpe</code> / <code>oos_return</code></td>
+    </tr>
+    <tr>
+      <td><strong>幸存者偏差</strong></td>
+      <td>数据快照必须记录 <code>pool_definition</code>（股票池口径）非空</td>
+      <td><code>pool_definition</code></td>
+    </tr>
+  </table>
+
+  <h3>综合判定口径（_audit_verdict）</h3>
+  <table>
+    <tr><th>判定</th><th>条件</th><th>COO 后续动作</th></tr>
+    <tr><td><span class="badge green">通过</span></td><td>四项全部通过</td><td>继续报告成稿</td></tr>
+    <tr><td><span class="badge yellow">有条件通过</span></td><td>恰好 1 项失败 <strong>且</strong> 失败项非「未来函数」</td><td>继续报告成稿，附条件说明</td></tr>
+    <tr><td><span class="badge red">否决</span></td><td>未来函数失败，或 ≥2 项失败</td><td>打回量化工程师，≤3 轮，超限升级老板</td></tr>
+  </table>
+
+  <h3>审计产出结构</h3>
+  <pre><code><span class="cm"># 单域审计 dict</span>
+{
+  <span class="str">"agent"</span>: <span class="str">"执行风险审计员"</span> | <span class="str">"模型风险审计员"</span>,
+  <span class="str">"scope"</span>: <span class="str">"未来函数 / 参数敏感性"</span> | <span class="str">"过拟合 / 幸存者偏差"</span>,
+  <span class="str">"verdict"</span>: <span class="str">"通过"</span> | <span class="str">"有条件通过"</span> | <span class="str">"否决"</span>,
+  <span class="str">"checks"</span>: [{<span class="str">"item"</span>, <span class="str">"passed"</span>, <span class="str">"detail"</span>}, ...],
+  <span class="str">"data"</span>: {<span class="str">"execution_lag"</span>, <span class="str">"sensitivity_spread"</span>, ...},
+  <span class="str">"conclusion_md"</span>: <span class="str">"完整详细结论（判定标准/实测/判定/风险含义/微调建议）"</span>
+}
+
+<span class="cm"># merge_risk_audits 聚合结构</span>
+{
+  <span class="str">"verdict"</span>: <span class="str">"通过"</span> | <span class="str">"有条件通过"</span> | <span class="str">"否决"</span>,   <span class="cm"># 四项重判</span>
+  <span class="str">"checks"</span>: [...],           <span class="cm"># 固定顺序：未来函数→过拟合→参数敏感性→幸存者偏差</span>
+  <span class="str">"is_sharpe"</span>, <span class="str">"oos_sharpe"</span>, <span class="str">"sensitivity_spread"</span>,
+  <span class="str">"execution"</span>: {...},        <span class="cm"># 执行风险完整结论</span>
+  <span class="str">"model"</span>: {...},            <span class="cm"># 模型风险完整结论</span>
+  <span class="str">"per_stock"</span>: {...}         <span class="cm"># 组合版附加分股明细</span>
+}</code></pre>
+</section>
+
+<!-- ==================== 数据源降级链 ==================== -->
+<section class="card" id="data">
+  <h2><span class="section-icon" style="background:rgba(34,211,238,.18)">📡</span>数据源降级链（国内免代理）</h2>
+  <p>DataCollector.collect 按优先级尝试四级数据源，确保国内网络环境免代理直连可用：</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot" style="border-color:#34d399;background:rgba(52,211,153,.15);color:#86efac">1</div>
+      <div class="flow-body">
+        <div class="title">AKShare（东方财富 push2）<span class="badge green">首选 · 国内直连</span></div>
+        <div class="desc">stock_zh_a_hist 日线前复权，时间窗 n_days×1.6 冗余后截尾</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot" style="border-color:#34d399;background:rgba(52,211,153,.15);color:#86efac">2</div>
+      <div class="flow-body">
+        <div class="title">BaoStock（证券宝）<span class="badge green">备用 · 国内直连</span></div>
+        <div class="desc">query_history_k_data_plus 前复权，sh./sz. 前缀映射，应对东财限流</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot" style="border-color:#fbbf24;background:rgba(251,191,36,.15);color:#fcd34d">3</div>
+      <div class="flow-body">
+        <div class="title">yfinance（Yahoo Finance）<span class="badge yellow">海外备用</span></div>
+        <div class="desc">auto_adjust=True，需海外网络</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot" style="border-color:#f87171;background:rgba(248,113,113,.15);color:#fca5a5">4</div>
+      <div class="flow-body">
+        <div class="title">合成数据（synthetic_ohlcv）<span class="badge red">兜底 · 必须披露</span></div>
+        <div class="desc">种子化 GBM + 三段趋势注入，降级原因 + 披露写入 log 与快照 meta，报告加合成数据警告（红线 4）</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>DataSnapshot 快照结构</h3>
+  <pre><code>@dataclass
+<span class="kw">class</span> <span class="fn">DataSnapshot</span>:
+    snapshot_id: str      <span class="cm"># SNAP-{sha1(symbol+首日+末日+末收)[:8]}</span>
+    symbol: str
+    dates: list[str]
+    closes: list[float]
+    source: str           <span class="cm"># "akshare:600519（真实公开数据·东方财富源·国内直连）"</span>
+    pool_definition: str  <span class="cm"># 股票池口径（幸存者偏差检查用）</span>
+    meta: dict</code></pre>
+  <p>快照落盘 <code>09-backtest/_snapshots/SNAP-*.csv + .meta.json</code>，配合 reproduce.py 可复现（红线 5）。</p>
+</section>
+
+<!-- ==================== 中枢与留痕 ==================== -->
+<section class="card" id="hub">
+  <h2><span class="section-icon" style="background:rgba(52,211,153,.18)">🗄</span>Context Hub 中枢与留痕机制</h2>
+  <p>Context Hub 是<strong>单一事实来源</strong>：9 个卷宗 + 回测资产库 + 订单台账 + 全量日志。所有 Agent 只读写 Context Hub，全部动作留痕可回滚。</p>
+
+  <h3>卷宗清单</h3>
+  <table>
+    <tr><th>卷宗</th><th>内容</th></tr>
+    <tr><td><code>00-charter.md</code></td><td>公司宪章：定位、客户、价值主张、合规红线</td></tr>
+    <tr><td><code>01-market.md</code></td><td>调研：目标人群、竞品、定价带（PRICE_TABLE 来源）</td></tr>
+    <tr><td><code>02-brand.md</code></td><td>命名、VI、语调、金融广告禁词表</td></tr>
+    <tr><td><code>03-product.md</code></td><td>报告模板、回测规范、验收标准（DoD 9 章定义）</td></tr>
+    <tr><td><code>04-ops.md</code></td><td>SOP、话术库、FAQ、权限表、免责声明全文</td></tr>
+    <tr><td><code>05-pipeline.md</code></td><td>内容台账、线索台账、<strong>订单台账</strong>（receipt 留痕）</td></tr>
+    <tr><td><code>06-finance.md</code></td><td>票据、收支、毛利、现金流（_book_order 入账留痕）</td></tr>
+    <tr><td><code>07-log.md</code></td><td><strong>全量动作日志</strong>（所有 Agent + 闸门留痕）</td></tr>
+    <tr><td><code>08-review.md</code></td><td>周报、复盘、模拟盘跟踪记录、决策记录（versioned）</td></tr>
+    <tr><td><code>09-backtest/</code></td><td>回测资产库：快照 CSV / strategy_spec.json / reproduce.py</td></tr>
+    <tr><td><code>orders.json</code></td><td>订单台账（_book_order 幂等维护，先剔除同 ID 旧记录再 append）</td></tr>
+    <tr><td><code>payments.json</code></td><td>支付记录（webapp 维护：pay_id / paid_at / success / status）</td></tr>
+  </table>
+
+  <h3>关键机制</h3>
+  <ul>
+    <li><strong>版本留痕</strong>：<code>write(name, content, versioned=True)</code> 旧稿 rename 为 <code>*.v{n}.md</code> 顺延</li>
+    <li><strong>回滚机制</strong>：<code>mark_stale(name)</code> → 07-log.md 记 <code>[STALE]</code> + 文件 rename 为 <code>*.stale.*</code></li>
+    <li><strong>幂等入账</strong>：<code>_book_order</code> 先剔除同 order_id 旧记录再 append，绝不重复入账</li>
+    <li><strong>日志格式</strong>：<code>## 时间 | Agent | 动作</code> + 输入/输出/工具调用/截图索引</li>
+  </ul>
+</section>
+
+<!-- ==================== 多股组合 ==================== -->
+<section class="card" id="multi">
+  <h2><span class="section-icon" style="background:rgba(99,102,241,.18)">📈</span>多股组合回测</h2>
+  <p>当标的为多只股票时，COO 转入 <code>_run_multi_research</code> 分支：<strong>每股独立闭环 + 等权组合闭环</strong>，产出 N+1 份报告。</p>
+
+  <h3>分支流程</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot">1</div>
+      <div class="flow-body">
+        <div class="title">策略翻译一次（全标的共用）</div>
+        <div class="desc">StrategyTranslator.translate(idea) → 同一 StrategySpec 应用于所有标的</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">2</div>
+      <div class="flow-body">
+        <div class="title">每股独立闭环（N 份个股报告）</div>
+        <div class="desc">collect → build_and_run → 风控审计 ≤3 轮 → 报告成稿 → 评审 ≤3 轮 → 合规终检；每股独立子目录 <code>09-backtest/&lt;order_id&gt;/&lt;safe&gt;/</code></div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">3</div>
+      <div class="flow-body">
+        <div class="title">等权组合闭环（1 份组合报告）</div>
+        <div class="desc">日期交集对齐（≥60 天）→ 等权按日再平衡 → run_portfolio_backtest → 组合审计（含 per_stock 明细）→ portfolio_report.md</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">4</div>
+      <div class="flow-body">
+        <div class="title">组合 QC + 入账</div>
+        <div class="desc">每股 strategy_spec.json + reproduce.py 齐备 + 组合 portfolio_strategy_spec.json + reproduce_portfolio.py + 五指标齐全</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>组合回测口径</h3>
+  <ul>
+    <li><strong>日期对齐</strong>：日期交集保序，不足 <code>MIN_ALIGNED_DAYS=60</code> 抛 ValueError，绝不外推缺失日</li>
+    <li><strong>等权再平衡</strong>：组合日收益 = 各股策略日收益等权平均（按日再平衡简化口径）</li>
+    <li><strong>指标携带</strong>：<code>per_stock</code>（对齐窗口口径分股明细）、<code>weighting</code>、<code>aligned_days</code></li>
+  </ul>
+</section>
+
+<!-- ==================== 前端 API ==================== -->
+<section class="card" id="api">
+  <h2><span class="section-icon" style="background:rgba(251,191,36,.18)">🌐</span>前端 API 与支付闸门</h2>
+  <p>纯标准库 HTTP 服务（ThreadingHTTPServer，127.0.0.1:8000），6 视图前端 + 模拟微信扫码支付闸门。</p>
+
+  <h3>API 端点</h3>
+  <table>
+    <tr><th>端点</th><th>方法</th><th>说明</th></tr>
+    <tr><td><code>/api/state</code></td><td>GET</td><td>订单台账 + 支付记录 + 下一订单号</td></tr>
+    <tr><td><code>/api/checkout</code></td><td>POST</td><td>生成收款单（PAY-xxx），落库 payments.json</td></tr>
+    <tr><td><code>/api/pay_confirm</code></td><td>POST</td><td>确认扫码支付：记录 paid_at / success / status + 闸门⑥留痕</td></tr>
+    <tr><td><code>/api/run</code></td><td>POST</td><td><strong>支付闸门</strong>：paid && success 才开始回测（先付款后出结果）</td></tr>
+    <tr><td><code>/api/report</code></td><td>GET</td><td>读取指定订单/股票的报告 Markdown</td></tr>
+    <tr><td><code>/api/chart</code></td><td>GET</td><td>返回回测图表 PNG</td></tr>
+    <tr><td><code>/api/log</code></td><td>GET</td><td>读取 07-log.md 全量日志</td></tr>
+    <tr><td><code>/api/weekly</code></td><td>POST</td><td>生成周报（闸门⑧）</td></tr>
+    <tr><td><code>/api/check_scope</code></td><td>POST</td><td>越界请求拦截（代客理财/荐股/收益承诺）</td></tr>
+  </table>
+
+  <h3>支付闸门流程</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot">①</div>
+      <div class="flow-body">
+        <div class="title">生成收款单</div>
+        <div class="desc">POST /api/checkout → {pay_id, order_id(预分配), amount, created_at, status:"待支付", paid:false} → payments.json</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">②</div>
+      <div class="flow-body">
+        <div class="title">模拟扫码支付</div>
+        <div class="desc">POST /api/pay_confirm → 记录 paid_at(支付时间) / success(是否成功) / status(支付成功|支付失败) + 闸门⑥留痕</div>
+      </div>
+    </div>
+    <div class="flow-line"></div>
+    <div class="flow-step">
+      <div class="flow-dot">③</div>
+      <div class="flow-body">
+        <div class="title">支付校验 → 开始履约</div>
+        <div class="desc">POST /api/run {pay_id} → 校验 paid && success（否则 402 拒绝）→ 执行 run_first_order → 回填 fulfilled_order_id + status:"已履约"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight">
+    支付信息全部落库 <code>context_hub/payments.json</code>：每笔含 <strong>pay_id / order_id / created_at / paid / paid_at / success / status / fulfilled_order_id</strong>，闸门⑥同步写入 07-log.md 留痕。
+  </div>
+
+  <h3>前端 6 视图</h3>
+  <table>
+    <tr><th>视图</th><th>路由</th><th>功能</th></tr>
+    <tr><td>工作台</td><td><code>#/work</code></td><td>KPI 统计卡 + 订单台账 + 支付记录</td></tr>
+    <tr><td>下单</td><td><code>#/order</code></td><td>订单信息 → 收款单 → 模拟扫码 → 开始履约</td></tr>
+    <tr><td>履约进度</td><td><code>#/progress</code></td><td>8 阶段实时进度（stage 动画）</td></tr>
+    <tr><td>研究报告</td><td><code>#/report</code></td><td>报告 tab 切换（个股/组合/审计详报），Markdown 渲染 + 图表</td></tr>
+    <tr><td>合规工具</td><td><code>#/compliance</code></td><td>越界检测 + 周报生成</td></tr>
+    <tr><td>留痕审计</td><td><code>#/log</code></td><td>07-log.md 全量日志实时查看</td></tr>
+  </table>
+</section>
+
+<div style="text-align:center;color:var(--muted);font-size:.82em;margin-top:40px">
+  量化策略研究工作室 · MiMo-OPC 三层架构 · Agent 调度与功能详解 · 生成于 2026-11-07
+</div>
+
+</div>
+</body>
+</html>

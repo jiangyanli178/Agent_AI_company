@@ -1,0 +1,48 @@
+{
+  "zxg": {
+    "publish_url": "https://gu.qq.com/",
+    "max_per_day": 3,
+    "avoid": [
+      "稳赚",
+      "必涨",
+      " guaranteed",
+      "内幕消息",
+      "荐股",
+      "带单",
+      "开户加群",
+      "全仓买入",
+      "卖房炒股"
+    ],
+    "content_pool": [
+      "今日财经要点速览：关注宏观政策与行业动态，理性看待市场波动，注意控制仓位与风险。",
+      "市场信息繁杂，建议以官方渠道披露为准，警惕不实传闻，坚持独立思考、谨慎决策。",
+      "财经日历提示：关注重要经济数据与政策发布节点，做好应对预案，不盲目追涨杀跌。"
+    ],
+    "daily": {
+      "enabled": false,
+      "time": "09:00",
+      "fired_date": ""
+    }
+  },
+  "research": {
+    "sources": [
+      "https://www.reuters.com/markets/",
+      "https://www.bloomberg.com/markets",
+      "https://www.cnbc.com/economy/",
+      "https://finance.sina.com.cn/",
+      "https://www.eastmoney.com/",
+      "https://www.cls.cn/",
+      "https://www.yicai.com/",
+      "https://www.gov.cn/zhengce/",
+      "https://www.pbc.gov.cn/",
+      "https://www.stats.gov.cn/"
+    ],
+    "max_items": 8,
+    "lookback_hours": 24
+  },
+  "prompts": {
+    "research": "你是财经信息汇总专家。请访问给定的财经网站，筛选出对股市有影响且对投资者有用的信息，包括：宏观政策、经济数据、行业动态、公司重大事件、海外市场。每条信息标注来源与时间，客观陈述不夸大，输出简报。",
+    "factcheck": "你是真实性校验专家。请对汇总简报中的每条信息逐条核实：多源交叉印证、优先官方渠道、检查时间与数字是否准确、识别夸大与误导性表述。对每条给出「属实/存疑/不实」结论与依据，剔除不实信息后生成发布终稿。",
+    "post_generation": "你是财经社区内容编辑。请把校验通过的信息整理成一篇适合腾讯自选股社区发布的帖子：标题醒目、条理清晰、语言通俗、客观中立，附风险提示，不要使用绝对化表述（如稳赚、必涨、内幕），长度控制在 500 字以内。"
+  }
+}

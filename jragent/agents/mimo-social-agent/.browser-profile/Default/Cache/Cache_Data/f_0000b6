@@ -1,0 +1,1621 @@
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var sliderCaptcha = window['_captcha']; // 滑动验证插件
+
+var userLogin = function () {
+    function userLogin() {
+        _classCallCheck(this, userLogin);
+
+        this.init(phone_format_reg);
+    }
+    //整体初始化
+
+
+    _createClass(userLogin, [{
+        key: 'init',
+        value: function init() {
+            //初始化认证中心的正则表达式
+            this.initRegRegular();
+            //初始化数据
+            this.initData();
+            //初始化账号登录
+            this.initAccountLogin();
+            //初始化账号注册
+            this.initAccountRegister();
+            //初始化手机号验证
+            this.initMobileValidate();
+        }
+    },
+    {
+        key:'mountSliderCaptach', //挂载滑动验证插件
+        value:function mountSliderCaptach(cb) {
+            if(!sliderCaptcha) {
+                sliderCaptcha = window['_captcha'];
+            }
+            var self = this;
+            sliderCaptcha.init(
+                'slider',
+                {
+                    callback:function(result){
+                        cb(result);
+                        setTimeout(
+                            self.handleSliderCaptachClose.bind(self)
+                        , 500);
+                        window.parent.postMessage($(".container").height(), '*');
+                    },
+                    width:280,
+                    maskDom:'sli-mask'
+                },
+                'sli-captcha' //挂载dom的id
+            )
+            this.dom.$sliderCaptchaMask.css({'display': 'block'});
+        }
+    },{
+        key:'handleSliderCaptachShow', // 弹出滑动验证
+        value:function handleSliderCaptachShow(cb) {
+            this.mountSliderCaptach(cb);
+            this.dom.$silderCaptcha.css({'display': 'block'});
+            this.dom.$sliderCaptchaMask.css({'display': 'block'});
+        }
+    },{
+        key:'handleSliderCaptachClose', // 关闭滑动验证
+        value:function handleSliderCaptachClose() {
+            this.dom.$silderCaptcha.css({'display': 'none'});
+            this.dom.$sliderCaptchaMask.css({'display': 'none'});
+        }
+
+        //初始化认证中心的正则表达式
+    }, {
+        key: 'initRegRegular',
+        value: function initRegRegular() {
+            get_phone_format_reg('');
+        }
+        //初始化数据
+
+    }, {
+        key: 'initData',
+        value: function initData() {
+            this.data = {
+                // 登录的数据
+                loginWay: 'mobile',
+                autoLogin: true,
+                loginValidTime: null,
+                isMobileLogin: false,
+                mobileLoginToken: '',
+                // 注册的数据
+                registerWay: 'mobile',
+                mobileRegValidTime: null,
+                emailRegValidTime: null,
+                mobileRegToken: '',
+                mobileLoginCaptchaResult:{},
+                mobileRegCaptchaResult:{},
+                emsRegCaptchaResult:{}
+            };
+            this.dom = {
+                /**********顶级的dom元素**********/
+                //账号登录根元素
+                $accountLoginRoot: $(".login-container"),
+                //账号注册根元素
+                $accountRegRoot: $(".register-container"),
+                //手机号验证根元素
+                $mobileValidRoot: $(".validate-container"),
+                /*******账号登录模块的dom元素******/
+                //账号登录的TabContent
+                $accountLoginTabCon: $(".login-container .account-login-container"),
+                //手机登录的TabContent
+                $mobileLoginTabCon: $(".login-container .mobile-login-container"),
+                //错误提示容器
+                $loginErrorTipCon: $(".login-container .login-error-waring"),
+                //账号登录用户名输入框
+                $accontLoginUsername: $(".login-container .account-login-container .username"),
+                //账号登录密码输入框
+                $accountLoginPassword: $(".login-container .account-login-container .password"),
+                //密码输入框中的眼睛
+                $accountLoginEyes: $(".login-container .account-login-container .password-eyes"),
+                //账号登录图片验证码框
+                $accountLoginImgValid: $(".login-container .account-login-container .imgvalid-container .validcode"),
+                //账号登录图片验证码
+                $accountLoginImgValidPictrue: $(".login-container .account-login-container .imgvalid-container .valid-img"),
+                //手机登录用户名输入框
+                $mobileLoginUsername: $(".login-container .mobile-login-container .mobile"),
+                //手机登录图形验证码框
+                $mobileLoginImgValid: $(".login-container .mobile-login-container .validimg"),
+                //手机登录图形验证码
+                $mobileLoginImgValidPicture: $(".login-container .mobile-login-container .valid-img"),
+                //手机登录验证码输入框
+                $mobileLoginValidcode: $(".login-container .mobile-login-container .validcode"),
+                //自动登录和忘记密码的工具条
+                $accountLoginTools: $(".login-container .account-login-tools"),
+                //自动登录Dom
+                $autoLoginCheckbox: $(".login-container .account-login-checkbox"),
+                //忘记密码Dom
+                $loginForgetPass: $(".login-container .account-forget-password"),
+                //获取手机号登录验证码Dom
+                $mobileLoginValidCode: $(".login-container .validate-pass-btn"),
+                //登录按钮Dom
+                $accountLoginBtn: $(".login-container .account-login-btn"),
+                //立即注册Dom
+                $immedRegister: $(".login-container .account-register-tip .register"),
+                /*******账号注册模块的dom元素******/
+                //手机号注册的TabContent
+                $mobileRegTabCon: $(".register-container .mobile-register-container"),
+                //邮箱注册的TabContent
+                $emailRegTabCon: $(".register-container .email-register-container"),
+                //错误提示容器
+                $regErrorTipCon: $(".register-container .register-error-waring"),
+                //手机注册用户名输入框
+                $regMobileUsername: $(".register-container .mobile-register-container .mobile"),
+                //手机注册验证码框
+                $regMobileImgValid: $(".register-container .mobile-register-container .validimg"),
+                //手机注册验证码
+                $regMobileImgValidPicture: $(".register-container .mobile-register-container .valid-img"),
+                //手机注册验证码输入框
+                $regMobileValidcode: $(".register-container .mobile-register-container .validcode"),
+                //获取手机号注册验证码Dom
+                $mobileRegValidCode: $(".register-container .mobile-register-container .validate-pass-btn"),
+                //邮箱注册用户名输入框
+                $regEmailAddress: $(".register-container .email-register-container .email"),
+                //邮箱注册验证码输入框
+                $regEmailValidCode: $(".register-container .email-register-container .validcode"),
+                //邮箱注册图片验证码
+                $regEmailImgValidPicture: $(".register-container .email-register-container .valid-img"),
+                //邮箱注册用户名输入框
+                $regEmailUsername: $(".register-container .email-register-container .username"),
+                // 邮箱注册图形验证码
+                $regEmailImgValid: $(".register-container .email-register-container .validimg"),
+                //邮箱注册密码输入框
+                $regEmailPaaword: $(".register-container .email-register-container .password"),
+                //邮箱注册再次输入密码输入框
+                $regEmailRepassword: $(".register-container .email-register-container .repassword"),
+                //邮箱注册的验证码按钮
+                $emailRegValidCode: $(".register-container .email-register-container .validate-pass-btn"),
+                //注册的按钮
+                $accountRegister: $(".register-container .account-register-btn"),
+                //同花顺用户协议
+                $agreementWidth: $(".register-container .account-register-tip"),
+                //注册中的立即登录Dom
+                $regImmedLogin: $(".register-container .account-login-tip .login"),
+                /*******手机号验证的dom元素******/
+                //返回上一步的Dom
+                $backStep: $(".validate-container .back"),
+                //错误提示容器
+                $validErrorCon: $(".validate-container .valid-error-waring"),
+                //手机验证手机号输入框
+                $validMobileUsername: $(".validate-container .mobile-validate-container .mobile"),
+                //手机验证验证码输入框
+                $validMobileValidcode: $(".validate-container .mobile-validate-container .validcode"),
+                //获取手机号验证的验证码Dom
+                $mobileValidateValidCode: $(".validate-container .validate-pass-btn"),
+                //获取验证的按钮
+                $validButton: $(".validate-container .mobile-validate-btn"),
+                //手机号验证中的立即登录
+                $validImmedLogin: $(".validate-container .mobile-login-tip .login"),
+                //滑动验证
+                $silderCaptcha: $('#sli-captcha'),
+                //滑动验证mask
+                $sliderCaptchaMask: $('#sli-mask')
+            };
+        }
+        //账号登录初始化
+
+    }, {
+        key: 'initAccountLogin',
+        value: function initAccountLogin() {
+            this.bindLoginModule();
+        }
+        //账号注册初始化
+
+    }, {
+        key: 'initAccountRegister',
+        value: function initAccountRegister() {
+            this.bindRegisterModule();
+        }
+        //绑定登录模块
+
+    }, {
+        key: 'bindLoginModule',
+        value: function bindLoginModule() {
+            //绑定tab切换事件
+            this.bindLoginSwitchTab();
+            //绑定账号登录输入框
+            this.bindAccountLoginInput();
+            //绑定手机号登录输入框
+            this.bindMobileLoginInput();
+            //绑定密码输入框的中眼睛
+            this.bindPasswordEyes();
+            //绑定自动登录的选项
+            this.bindAutoLogin();
+            //绑定忘记密码事件
+            this.bindForgetPassClick();
+            //绑定监听enter手机号登录事件
+            this.bindEnterMobileLogin();
+            //绑定监听enter账号登录事件
+            this.bindEnterAccountLogin();
+            //绑定登录按钮
+            this.bindLoginButton();
+            //绑定获取验证码
+            this.bindValidCode();
+            //绑定立即注册的事件
+            this.bindImmedRegister();
+        }
+        //绑定注册模块
+
+    }, {
+        key: 'bindRegisterModule',
+        value: function bindRegisterModule() {
+            //绑定tab切换事件
+            this.bindRegisterSwitchTab();
+            //绑定手机号注册输入框
+            this.bindAccountRegInput();
+            //绑定手机号注册发送验证码
+            this.bindRegMobileValidcode();
+            //绑定邮箱注册输入框
+            this.bindEmailRegInput();
+            //绑定邮箱注册获取验证码
+            this.bindRegEmailValidcode();
+            //绑定注册的事件
+            this.bindRegisterButton();
+            //绑定立即登录的事件
+            this.bindRegImmedLogin();
+            //绑定同意协议的点击
+            this.bindAgreeWidthAgreement();
+        }
+        //绑定手机号验证模块
+
+    }, {
+        key: 'initMobileValidate',
+        value: function initMobileValidate() {
+            //绑定返回上一步
+            this.bindBackStep();
+            //绑定手机号验证输入框
+            this.bindMobileValidInput();
+            //绑定手机号验证获取验证码
+            this.bindMobileValidCode();
+            //绑定验证按钮
+            this.bindMobileValidate();
+            //绑定立即登录的事件
+            this.bindValidImmedLogin();
+        }
+        /*********************** 登录模块 ***********************/
+        //绑定登录模块的Tab选项事件
+
+    }, {
+        key: 'bindLoginSwitchTab',
+        value: function bindLoginSwitchTab() {
+            var self = this;
+            window.parent.postMessage($(".container").height(), '*');
+            //绑定Tab切换的事件
+            $(".login-container .top").off('click').on('click', '.tab', function () {
+                //tab标签切换
+                var $target = $(this);
+                var selectName = $target.attr("data-name");
+                self.data.loginWay = selectName;
+                selectName === 'mobile' ? TA.log('pctsh_login.tuphone') : TA.log('pctsh_login.tuacc');
+                $(".login-container .top .tab").removeClass("active");
+                $(this).addClass("active");
+                //tab的内容切换
+                self.renderLoginTabContent(selectName);
+                //清空提示内容
+                self.dom.$loginErrorTipCon.html('');
+                //通知iframe的父容器更新iframe的高度
+                window.parent.postMessage($(".container").height(), '*');
+            });
+        }
+        //绑定账号输入框
+
+    }, {
+        key: 'bindAccountLoginInput',
+        value: function bindAccountLoginInput() {
+            var self = this;
+            this.dom.$accontLoginUsername.off('blur').on('blur', function () {
+                var $target = $(this);
+                var username = $target.val();
+                var usernameInput = $target.parents(".username-container");
+                if (username !== '') {
+                    usernameInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$accountLoginPassword.off('blur').on('blur', function () {
+                var $target = $(this);
+                var password = $target.val();
+                var passwordInput = $target.parents(".password-container");
+                if (password !== '') {
+                    passwordInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$accountLoginImgValid.off('blur').on('blur', function () {
+                var $target = $(this);
+                var imgValid = $target.val();
+                var imgValidInput = $target.parents(".imgvalid-container");
+                if (imgValid !== '') {
+                    imgValidInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$accountLoginPassword.bind('input propertychange', function () {});
+            this.dom.$accountLoginImgValidPictrue.off('click').on('click', function () {
+                var $target = $(this);
+                var oldSrc = $target.attr("data-src");
+                var newImgSrc = oldSrc + '&' + Math.random();
+                $target.attr("src", newImgSrc);
+            });
+        }
+        //绑定手机号输入框
+
+    }, {
+        key: 'bindMobileLoginInput',
+        value: function bindMobileLoginInput() {
+            var self = this;
+            this.dom.$mobileLoginUsername.off('blur').on('blur', function () {
+                var $target = $(this);
+                var mobile = $target.val();
+                var mobileInput = $target.parents(".mobile-container");
+                if (mobile !== '') {
+                    mobileInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$mobileLoginValidcode.off('blur').on('blur', function () {
+                var $target = $(this);
+                var validCode = $target.val();
+                var validCodeInput = $target.parents(".validcode-container");
+                if (validCode !== '') {
+                    validCodeInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$mobileLoginImgValid.off('blur').on('blur', function () {
+                var $target = $(this);
+                var validImg = $target.val();
+                var validImgInput = $target.parents(".imgvalid-container");
+                if (validImg !== '') {
+                    validImgInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$mobileLoginImgValidPicture.off('click').on('click', function () {
+                var $target = $(this);
+                var oldSrc = $target.attr("data-src");
+                var newImgSrc = oldSrc + '&' + Math.random();
+                $target.attr("src", newImgSrc);
+            });
+        }
+        //绑定密码输入框中的眼睛
+
+    }, {
+        key: 'bindPasswordEyes',
+        value: function bindPasswordEyes() {
+            var self = this;
+            this.dom.$accountLoginEyes.off('click').on('click', function () {
+                var $target = $(this);
+                if ($target.hasClass("active")) {
+                    $target.removeClass("active");
+                    self.dom.$accountLoginPassword.attr("type", "password");
+                } else {
+                    $target.addClass("active");
+                    self.dom.$accountLoginPassword.attr("type", "text");
+                }
+            });
+        }
+        //绑定自动登录的选项
+
+    }, {
+        key: 'bindAutoLogin',
+        value: function bindAutoLogin() {
+            var self = this;
+            this.dom.$autoLoginCheckbox.off('click').on('click', function () {
+                var $target = $(this);
+                var isActive = $target.hasClass("active");
+                isActive ? $target.removeClass("active") : $target.addClass("active");
+                self.data.autoLogin = !isActive;
+            });
+        }
+        //绑定忘记密码事件
+
+    }, {
+        key: 'bindForgetPassClick',
+        value: function bindForgetPassClick() {
+            $(".account-forget-password").off('click').on("click", function () {
+                TA.log('pctsh_login.acc.forget');
+            });
+        }
+        //绑定登录按钮
+
+    }, {
+        key: 'bindLoginButton',
+        value: function bindLoginButton() {
+            var self = this;
+            this.dom.$accountLoginBtn.off('click').on('click', function () {
+                var tabName = self.data.loginWay;
+                if (tabName === 'account') {
+                    self.accountLoginValid();
+                } else if (tabName === 'mobile') {
+                    self.mobileLoginValid();
+                }
+            });
+        }
+        //绑定获取验证码
+
+    }, {
+        key: 'bindValidCode',
+        value: function bindValidCode() {
+            var self = this;
+            this.dom.$mobileLoginValidCode.off('click').on('click', function () {
+                TA.log('pctsh_login.phone.obtain');
+                var mobile = self.dom.$mobileLoginUsername.val();
+               // var imgValidCode = self.dom.$mobileLoginImgValid.val();
+                self.startCountDown({
+                    type: 'mobile',
+                    mobile: mobile,
+                    //imgValidCode: imgValidCode,
+                    tipPosition: self.dom.$loginErrorTipCon,
+                    memory: self.data.loginValidTime,
+                    btnPosition: self.dom.$mobileLoginValidCode,
+                    inputPosition: self.dom.$mobileLoginUsername.parents('.mobile-container'),
+                    seconds: 60
+                },
+                //发送验证码请求
+                function (sendSuccess) {
+                    self.handleSliderCaptachShow(function(result) {
+                        self.data.mobileLoginCaptchaResult = result;
+                        self.mobileLoginSendSMS({
+                            mobile: thsencrypt.encode(mobile),
+                            //captcha: imgValidCode,
+                            rsa_version: thsencrypt.getVersion(),
+                            captcha_type:result.captcha_type,
+                            captcha_phrase:result.phrase,
+                            captcha_ticket:result.ticket,
+                            captcha_signature:result.signature,
+                            department:'sns_master'
+                        }, sendSuccess);
+                    })
+                },
+                //倒计时结束后自动绑定上发送验证码事件
+                function () {
+                    self.bindValidCode();
+                });
+            });
+        }
+        //绑定立即注册按钮
+
+    }, {
+        key: 'bindImmedRegister',
+        value: function bindImmedRegister() {
+            var self = this;
+            this.dom.$immedRegister.off('click').on('click', function () {
+                TA.log('pctsh_login.signup');
+                self.dom.$accountLoginRoot.addClass("hide");
+                self.dom.$accountRegRoot.removeClass("hide");
+                self.reflushImgValid(self.dom.$regMobileImgValidPicture);
+                //通知iframe的父容器更新iframe的高度
+                window.parent.postMessage($(".container").height(), '*');
+            });
+        }
+        //渲染账号登录tab的内容
+
+    }, {
+        key: 'renderLoginTabContent',
+        value: function renderLoginTabContent(tabName) {
+            if (tabName === 'mobile') {
+                this.dom.$mobileLoginTabCon.removeClass("hide");
+                this.dom.$accountLoginTabCon.addClass("hide");
+                this.dom.$accountLoginTools.addClass("hide");
+                this.reflushImgValid(this.dom.$mobileLoginImgValidPicture);
+            } else if (tabName === 'account') {
+                this.dom.$accountLoginTabCon.removeClass("hide");
+                this.dom.$mobileLoginTabCon.addClass("hide");
+                this.dom.$accountLoginTools.removeClass("hide");
+                this.reflushImgValid(this.dom.$accountLoginImgValidPictrue);
+            }
+        }
+        //手机号登录发送验证码
+
+    }, {
+        key: 'mobileLoginSendSMS',
+        value: function mobileLoginSendSMS(data, sendSuccess) {
+            var _this = this;
+
+            $.ajax({
+                url: '/smsloginnew/send',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorCode === 0) {
+                    _this.data.mobileLoginToken = res.token;
+                    sendSuccess();
+                } else {
+                    _this.dom.$loginErrorTipCon.html(res.errorMsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        //绑定手机号enter登录事件
+
+    }, {
+        key: 'bindEnterMobileLogin',
+        value: function bindEnterMobileLogin() {
+            var self = this;
+            this.dom.$mobileLoginValidcode.keypress(function (e) {
+                var keycode = window.event ? window.event.keyCode : e.keyCode;
+                if (keycode === 13) {
+                    self.mobileLoginValid();
+                }
+            });
+        }
+        //绑定账号enter登录事件
+
+    }, {
+        key: 'bindEnterAccountLogin',
+        value: function bindEnterAccountLogin() {
+            var self = this;
+            this.dom.$accountLoginPassword.keypress(function (e) {
+                var keycode = window.event ? window.event.keyCode : e.keyCode;
+                if (keycode === 13) {
+                    self.accountLoginValid();
+                }
+            });
+        }
+        //账号登录验证
+
+    }, {
+        key: 'accountLoginValid',
+        value: function accountLoginValid() {
+            TA.log('pctsh_login.acc.login');
+            var self = this;
+            var username = this.dom.$accontLoginUsername.val();
+            var password = this.dom.$accountLoginPassword.val();
+            var usernameInput = this.dom.$accontLoginUsername.parents(".username-container");
+            var passwordInput = this.dom.$accountLoginPassword.parents(".password-container");
+            if (username === '') {
+                this.dom.$loginErrorTipCon.html('请输入用户名');
+                usernameInput.addClass("has-error");
+            } else if (phone_format_reg.test(username)) {
+                this.dom.$loginErrorTipCon.html('暂不支持手机号+密码登录，忘记用户名请拨打客服电话952555');
+                usernameInput.addClass("has-error");
+            } else if (email_format_reg.test(username)) {
+                this.dom.$loginErrorTipCon.html('暂不支持邮箱+验证码登录，忘记用户名请拨打客服电话952555');
+                usernameInput.addClass("has-error");
+            } else if (password === '') {
+                this.dom.$loginErrorTipCon.html('请输入密码');
+                passwordInput.addClass("has-error");
+            }
+            else {
+                //加盐标记
+                self.handleSliderCaptachShow(function(result) {
+                    getSaltGS(self.trimString(username))
+                    self.accountLogin({
+                        source: 'master',
+                        longLogin: self.data.autoLogin ? 'on' : 'off',
+                        uname: thsencrypt.encode(self.trimString(username)),
+                        passwd: thsencrypt.encode(hex_md5(self.trimString(password))),
+                        passwdSalt: encodeDataSaltOnce(self.trimString(password),self.trimString(username)),
+                        dsk:dsk,
+                        crnd: crnd,
+                        saltLoginTimes:1,
+                        rsa_version: thsencrypt.getVersion(),
+                        captcha_type:result.captcha_type,
+                        captcha_phrase:result.phrase,
+                        captcha_ticket:result.ticket,
+                        captcha_signature:result.signature
+                    },self.trimString(password));
+                })
+            }
+        }
+        //账号登录
+
+    }, {
+        key: 'accountLogin',
+        value: function accountLogin(data,pwd) {
+            var _this2 = this;
+            $.ajax({
+                url: '/login/dologinreturnjson2',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorcode === 0) {
+                    _this2.toCreationMain();
+                } else {
+                    if (res.dsk){
+                        dsk = res.dsk.toString();
+                        dsv = res.dsv.toString();
+                        if (dsk.length > 0){
+
+                            data.dsk = dsk;
+                            data.saltLoginTimes = 2;
+                            data.passwdSalt = encodeDataSaltTwice(pwd)
+                            _this2.accountLogin2(data,pwd)
+                            return ;
+                        }
+                    }
+                    _this2.dom.$loginErrorTipCon.html(res.errormsg);
+                    //刷新图形验证码
+                    // _this2.reflushImgValid(_this2.dom.$accountLoginImgValidPictrue);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        //手机号登录验证
+
+    }, {
+            key: 'accountLogin2',
+            value: function accountLogin2(data,pwd) {
+                console.log(pwd)
+                var _this3 = this;
+                $.ajax({
+                    url: '/login/dologinreturnjson2',
+                    type: 'post',
+                    data: data,
+                    dataType: 'json'
+                }).done(function (res) {
+                    if (res.errorcode === 0) {
+                        _this3.toCreationMain();
+                    } else {
+                        _this3.dom.$loginErrorTipCon.html(res.errormsg);
+
+
+                        //刷新图形验证码
+                        // _this2.reflushImgValid(_this2.dom.$accountLoginImgValidPictrue);
+                    }
+                }).fail(function (res) {}).always(function (res) {});
+            }
+            //手机号登录验证
+
+        }, {
+        key: 'mobileLoginValid',
+        value: function mobileLoginValid() {
+            TA.log('pctsh_login.phone.login');
+            var self = this;
+            var mobile = this.dom.$mobileLoginUsername.val();
+        //    var imgValid = this.dom.$mobileLoginImgValid.val();
+            var validCode = this.dom.$mobileLoginValidcode.val();
+            var mobileInput = this.dom.$mobileLoginUsername.parents(".mobile-container");
+         //   var imgValidInput = this.dom.$mobileLoginImgValid.parents(".imgvalid-container");
+            var validcodeInput = this.dom.$mobileLoginValidcode.parents(".validcode-container");
+            if (mobile === '') {
+                this.dom.$loginErrorTipCon.html('请输入手机号');
+                mobileInput.addClass("has-error");
+            }
+            /* else if (imgValid === '') {
+                this.dom.$loginErrorTipCon.html('请输入图形验证码');
+                imgValidInput.addClass("has-error");
+            } */
+            else if (this.data.mobileLoginToken === '') {
+                this.dom.$loginErrorTipCon.html('请先获取验证码');
+            } else {
+                this.validMobileNumber(mobile, {
+                    tipPosition: self.dom.$loginErrorTipCon,
+                    tipDesc: '手机号格式错误',
+                    errorPostion: mobileInput
+                }, function () {
+                    if (validCode === '') {
+                        self.dom.$loginErrorTipCon.html('请输入验证码');
+                        validcodeInput.addClass("has-error");
+                    } else if (!self.data.isMobileLogin) {
+                            var result = self.data.mobileLoginCaptchaResult;
+                            self.data.isMobileLogin = true;
+                            self.mobileLogin({
+                                source: 'master',
+                                mobile: thsencrypt.encode(self.trimString(mobile)),
+                                //captcha: self.trimString(imgValid),
+                                token: self.data.mobileLoginToken,
+                                signcode: thsencrypt.encode(self.trimString(validCode)),
+                                rsa_version: thsencrypt.getVersion(),
+                                captcha_type:result.captcha_type,
+                                captcha_phrase:result.phrase,
+                                captcha_ticket:result.ticket,
+                                captcha_signature:result.signature
+                            });
+                    }
+                });
+            }
+        }
+        //手机号登录
+
+    }, {
+        key: 'mobileLogin',
+        value: function mobileLogin(data) {
+            var _this3 = this;
+
+            $.ajax({
+                url: '/smsloginnew/checkbyifind',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorCode === 0) {
+                    _this3.toCreationMain();
+                } else {
+                    _this3.dom.$loginErrorTipCon.html(res.errorMsg);
+                    _this3.data.isMobileLogin = false;
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        /******************** 注册模块 **********************/
+        //绑定注册模块的Tab选项事件
+
+    }, {
+        key: 'bindRegisterSwitchTab',
+        value: function bindRegisterSwitchTab() {
+            var self = this;
+            //绑定tab切换事件
+            $(".register-container .top").off('click').on('click', '.tab', function () {
+                //tab标签切换
+                var $target = $(this);
+                var selectName = $target.attr("data-name");
+                selectName === 'mobile' ? TA.log('pctsh_signup.tuphone') : TA.log('pctsh_signup.tuemail');
+                self.data.registerWay = selectName;
+                $(".register-container .top .tab").removeClass("active");
+                $(this).addClass("active");
+                //清空错误提示内容
+                self.dom.$regErrorTipCon.html('');
+                //tab的内容切换
+                self.renderRegisterTabContent(selectName);
+                //通知iframe的父容器更新iframe的高度
+                window.parent.postMessage($(".container").height(), '*');
+            });
+        }
+        //绑定手机号注册输入框
+
+    }, {
+        key: 'bindAccountRegInput',
+        value: function bindAccountRegInput() {
+            var self = this;
+            this.dom.$regMobileUsername.off('blur').on('blur', function () {
+                var $target = $(this);
+                var mobile = $target.val();
+                var mobileInput = $target.parents(".mobile-container");
+                if (mobile !== '') {
+                    mobileInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+            this.dom.$regMobileValidcode.off('blur').on('blur', function () {
+                var $target = $(this);
+                var validcode = $target.val();
+                var validcodeInput = $target.parents(".validcode-container");
+                if (validcode !== '') {
+                    validcodeInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+            this.dom.$regMobileImgValid.off('blur').on('blur', function () {
+                var $target = $(this);
+                var imgValid = $target.val();
+                var imgValidInput = $target.parents(".imgvalid-container");
+                if (imgValid !== '') {
+                    imgValidInput.removeClass("has-error");
+                    self.dom.$loginErrorTipCon.html('');
+                }
+            });
+            this.dom.$regMobileImgValidPicture.off('click').on('click', function () {
+                var $target = $(this);
+                var oldSrc = $target.attr("data-src");
+                var newImgSrc = oldSrc + '&' + Math.random();
+                $target.attr("src", newImgSrc);
+            });
+            this.dom.$regEmailImgValidPicture.off('click').on('click', function () {
+                var $target = $(this);
+                var oldSrc = $target.attr("data-src");
+                var newImgSrc = oldSrc + '&' + Math.random();
+                $target.attr("src", newImgSrc);
+            });
+        }
+        //绑定手机号获取验证码
+
+    }, {
+        key: 'bindRegMobileValidcode',
+        value: function bindRegMobileValidcode() {
+            var self = this;
+            this.dom.$mobileRegValidCode.off('click').on('click', function () {
+                TA.log('pctsh_signup.phone.obtain');
+                var mobile = self.dom.$regMobileUsername.val();
+                self.startCountDown({
+                    type: 'mobile',
+                    mobile: mobile,
+                    tipPosition: self.dom.$regErrorTipCon,
+                    memory: self.data.mobileRegValidTime,
+                    btnPosition: self.dom.$mobileRegValidCode,
+                    inputPosition: self.dom.$regMobileUsername.parents(".mobile-container"),
+                    seconds: 60
+                }, function (sendSuccess) {
+                    self.handleSliderCaptachShow(function(result) {
+                        self.data.mobileRegCaptchaResult = result;
+                        self.mobileRegisterSendSMS({
+                            mobile: thsencrypt.encode(mobile),
+                            //captcha: imgValidCode,
+                            rsa_version: thsencrypt.getVersion(),
+                            captcha_type:result.captcha_type,
+                            captcha_phrase:result.phrase,
+                            captcha_ticket:result.ticket,
+                            captcha_signature:result.signature
+                        }, sendSuccess);
+                    })
+                }, function () {
+                    self.bindRegMobileValidcode();
+                });
+            });
+        }
+        //绑定邮箱注册输入框
+
+    }, {
+        key: 'bindEmailRegInput',
+        value: function bindEmailRegInput() {
+            var self = this;
+            this.dom.$regEmailAddress.off('blur').on('blur', function () {
+                var $target = $(this);
+                var email = $target.val();
+                var emailInput = $target.parents(".email-container");
+                if (email !== '') {
+                    emailInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+            this.dom.$regEmailValidCode.off('blur').on('blur', function () {
+                var $target = $(this);
+                var validcode = $target.val();
+                var validcodeInput = $target.parents(".validcode-container");
+                if (validcode !== '') {
+                    validcodeInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+            this.dom.$regEmailUsername.off('blur').on('blur', function () {
+                var $target = $(this);
+                var username = $target.val();
+                var usernameInput = $target.parents(".username-container");
+                if (username !== '') {
+                    usernameInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+            this.dom.$regEmailPaaword.off('blur').on('blur', function () {
+                var $target = $(this);
+                var password = $target.val();
+                var passwordInput = $target.parents(".password-container");
+                if (password !== '') {
+                    passwordInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+            this.dom.$regEmailRepassword.off('blur').on('blur', function () {
+                var $target = $(this);
+                var repassword = $target.val();
+                var repasswordInput = $target.parents(".repassword-container");
+                if (repassword !== '') {
+                    repasswordInput.removeClass("has-error");
+                    self.dom.$regErrorTipCon.html('');
+                }
+            });
+        }
+        //绑定邮箱注册获取验证码
+
+    }, {
+        key: 'bindRegEmailValidcode',
+        value: function bindRegEmailValidcode() {
+            var self = this;
+            this.dom.$emailRegValidCode.off('click').on('click', function () {
+                TA.log('pctsh_signup.email.obtain');
+                var email = self.dom.$regEmailAddress.val();
+                //var imgValidCode = self.dom.$regEmailImgValid.val();
+                self.startCountDown({
+                    type: 'email',
+                    email: email,
+                    //imgValidCode: imgValidCode,
+                    tipPosition: self.dom.$regErrorTipCon,
+                    memory: self.data.emailRegValidTime,
+                    btnPosition: self.dom.$emailRegValidCode,
+                    inputPosition: self.dom.$regEmailAddress.parents(".email-container"),
+                    seconds: 60
+                },
+                //发送验证码请求
+                function (sendSuccess) {
+                    self.handleSliderCaptachShow(function(result) {
+                        self.data.emsRegCaptchaResult = result;
+                        self.emailRegisterSendSMS({
+                            email: thsencrypt.encode(email),
+                            rflag: 1,
+                            rsa_version: thsencrypt.getVersion(),
+                            captcha_type:result.captcha_type,
+                            captcha_phrase:result.phrase,
+                            captcha_ticket:result.ticket,
+                            captcha_signature:result.signature
+                        }, sendSuccess);
+                    })
+
+
+                },
+                //倒计时结束后自动绑定上发送验证码事件
+                function () {
+                    self.bindRegEmailValidcode();
+                });
+            });
+        }
+        //绑定同意同花顺用户协议
+
+    }, {
+        key: 'bindAgreeWidthAgreement',
+        value: function bindAgreeWidthAgreement() {
+            this.dom.$agreementWidth.off('click').on('click', function () {
+                TA.log('pctsh_signup.agreement');
+            });
+        }
+        //绑定注册按钮
+
+    }, {
+        key: 'bindRegisterButton',
+        value: function bindRegisterButton() {
+            var self = this;
+            this.dom.$accountRegister.off('click').on('click', function () {
+                var tabName = self.data.registerWay;
+                if (tabName === 'mobile') {
+                    self.accountRegValid();
+                } else if (tabName === 'email') {
+                    self.emailRegValid();
+                }
+            });
+        }
+        //绑定立即登录的事件
+
+    }, {
+        key: 'bindRegImmedLogin',
+        value: function bindRegImmedLogin() {
+            var self = this;
+            this.dom.$regImmedLogin.off('click').on('click', function () {
+                TA.log('pctsh_signup.login');
+                self.dom.$accountRegRoot.addClass("hide");
+                self.dom.$accountLoginRoot.removeClass("hide");
+                self.reflushImgValid(self.dom.$mobileLoginImgValidPicture);
+                //通知iframe的父容器更新iframe的高度
+                window.parent.postMessage($(".container").height(), '*');
+            });
+        }
+        //渲染账号注册tab的内容
+
+    }, {
+        key: 'renderRegisterTabContent',
+        value: function renderRegisterTabContent(tabName) {
+            if (tabName === 'mobile') {
+                this.dom.$mobileRegTabCon.removeClass("hide");
+                this.dom.$emailRegTabCon.addClass("hide");
+                this.reflushImgValid(this.dom.$regMobileImgValidPicture);
+            } else if (tabName === 'email') {
+                this.dom.$emailRegTabCon.removeClass("hide");
+                this.dom.$mobileRegTabCon.addClass("hide");
+                this.reflushImgValid(this.dom.$regEmailImgValidPicture);
+            }
+        }
+        //手机号注册发送验证码
+
+    }, {
+        key: 'mobileRegisterSendSMS',
+        value: function mobileRegisterSendSMS(data, sendSuccess) {
+            var _this4 = this;
+
+            $.ajax({
+                url: '/smsloginnew/send',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorCode === 0) {
+                    _this4.data.mobileRegToken = res.token;
+                    sendSuccess();
+                } else {
+                    _this4.dom.$regErrorTipCon.html(res.errorMsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        //邮箱注册发送验证码
+
+    }, {
+        key: 'emailRegisterSendSMS',
+        value: function emailRegisterSendSMS(data, sendSuccess) {
+            var _this5 = this;
+
+            $.ajax({
+                url: '/register/getEmailSigncode',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorcode === 0) {
+                    sendSuccess();
+                } else {
+                    _this5.dom.$regErrorTipCon.html(res.errormsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        //手机号注册验证
+
+    }, {
+        key: 'accountRegValid',
+        value: function accountRegValid() {
+            TA.log('pctsh_signup.phone.signup');
+            var self = this;
+            var mobile = this.dom.$regMobileUsername.val();
+        //    var imgValid = this.dom.$regMobileImgValid.val();
+            var validcode = this.trimString(this.dom.$regMobileValidcode.val());
+            var mobileInput = this.dom.$regMobileUsername.parents(".mobile-container");
+        //    var imgValidInput = this.dom.$regMobileImgValid.parents(".imgvalid-container");
+            var validcodeInput = this.dom.$regMobileValidcode.parents(".validcode-container");
+            if (mobile === '') {
+                mobileInput.addClass("has-error");
+                this.dom.$regErrorTipCon.html('请输入手机号');
+            }
+            /* else if (imgValid === '') {
+                imgValidInput.addClass("has-error");
+                this.dom.$regErrorTipCon.html('请输入图形验证码');
+            } */
+            else if (this.data.mobileRegToken === '') {
+                this.dom.$regErrorTipCon.html('请先获取验证码');
+            } else {
+                this.validMobileNumber(mobile, {
+                    tipPosition: self.dom.$regErrorTipCon,
+                    tipDesc: '手机号格式错误请重新输入',
+                    errorPostion: mobileInput
+                }, function () {
+                    if (validcode === '') {
+                        validcodeInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html('请输入验证码');
+                    } else {
+                        var result = self.data.mobileRegCaptchaResult;
+                        self.mobileRegister({
+                            source: 'master',
+                            mobile: thsencrypt.encode(mobile),
+                            //captcha: imgValid,
+                            token: self.data.mobileRegToken,
+                            signcode: thsencrypt.encode(validcode),
+                            rsa_version: thsencrypt.getVersion(),
+                            captcha_type:result.captcha_type,
+                            captcha_phrase:result.phrase,
+                            captcha_ticket:result.ticket,
+                            captcha_signature:result.signature
+                        });
+                    }
+                });
+            }
+        }
+        //邮箱注册验证
+
+    }, {
+        key: 'emailRegValid',
+        value: function emailRegValid() {
+            TA.log('pctsh_signup.email.signup');
+            var self = this;
+            var email = this.dom.$regEmailAddress.val();
+            var validcode = this.trimString(this.dom.$regEmailValidCode.val());
+            var username = this.dom.$regEmailUsername.val();
+            var password = this.dom.$regEmailPaaword.val();
+        //    var imgValid = this.dom.$regEmailImgValid.val();
+            var repassword = this.dom.$regEmailRepassword.val();
+            var emailInput = this.dom.$regEmailAddress.parents(".email-container");
+        //    var imgValidInput = this.dom.$regEmailAddress.parents(".imgvalid-container");
+            var validcodeInput = this.dom.$regEmailValidCode.parents(".validcode-container");
+            var usernameInput = this.dom.$regEmailUsername.parents(".username-container");
+            var passwordInput = this.dom.$regEmailPaaword.parents(".password-container");
+            var repasswordInput = this.dom.$regEmailRepassword.parents(".repassword-container");
+            var usernameValid = this.validExceptSpecialSign(username);
+            var passwordHasSpace = password.indexOf(' ') !== -1;
+            var passwordValid = this.validNumberAndLetter(password);
+            if (email === '') {
+                emailInput.addClass("has-error");
+                this.dom.$regErrorTipCon.html('请输入邮箱');
+            } else {
+                this.validEmail(email, {
+                    tipPosition: self.dom.$regErrorTipCon,
+                    tipDesc: '邮箱格式错误，请重新输入',
+                    errorPostion: emailInput
+                }, function () {
+                    if (validcode === '') {
+                        validcodeInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html('请输入验证码');
+                    } else if (username === '') {
+                        usernameInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html('请输入用户名');
+                    }
+                    /* else if (imgValid === '') {
+                        imgValidInput.addClass("has-error");
+                        this.dom.$regErrorTipCon.html('请输入图形验证码');
+                    } */
+                    else if (!usernameValid) {
+                        usernameInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html('用户名只能是中文、数字、字母和下划线');
+                    } else if (username.length < 2 || username.length > 12) {
+                        usernameInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html('用户名长度必须是2-12位');
+                    } else if (password === '') {
+                        passwordInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html("请输入密码");
+                    } else if (repassword === '') {
+                        repasswordInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html("请再次输入密码");
+                    } else if (repassword !== password) {
+                        repasswordInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html("两次输入密码不一致");
+                    } else if (passwordHasSpace) {
+                        passwordInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html("密码请勿使用空格");
+                    } else if (!passwordValid) {
+                        passwordInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html("密码格式只能是字母和数字的组合");
+                    } else if (password.length < 8 || password.length > 20) {
+                        passwordInput.addClass("has-error");
+                        self.dom.$regErrorTipCon.html("密码长度必须是8-20位");
+                    } else {
+                        var result = self.data.emsRegCaptchaResult;
+                        self.emailRegister({
+                            email: thsencrypt.encode(email),
+                            signcode: thsencrypt.encode(validcode),
+                            account: thsencrypt.encode(username),
+                            passwd: thsencrypt.encode(hex_md5(password)),
+                            passwdSalt: encodeDataSaltOnce(password,username),
+                            dsk: dsk,
+                            crnd: crnd,
+                            rsa_version: thsencrypt.getVersion(),
+                            reg: 1,
+                            source: 'master',
+                            captcha_type:result.captcha_type,
+                            captcha_phrase:result.phrase,
+                            captcha_ticket:result.ticket,
+                            captcha_signature:result.signature
+                        });
+                    }
+                });
+            }
+        }
+        //手机号注册
+
+    }, {
+        key: 'mobileRegister',
+        value: function mobileRegister(data) {
+            var _this6 = this;
+
+            $.ajax({
+                url: '/smsloginnew/checkbyifind',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorCode === 0) {
+                    _this6.toCreationMain();
+                } else {
+                    _this6.dom.$regErrorTipCon.html(res.errorMsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        //邮箱注册
+
+    }, {
+        key: 'emailRegister',
+        value: function emailRegister(data) {
+            var _this7 = this;
+
+            $.ajax({
+                url: '/register/doRegisterByEmail',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorcode === 0) {
+                    _this7.toCreationMain();
+                    //切换到手机验证功能暂不开启
+                    //this.dom.$accountRegRoot.addClass("hide");
+                    //this.dom.$mobileValidRoot.removeClass("hide");
+                    //通知iframe的父容器更新iframe的高度
+                    //window.parent.postMessage($(".container").height(),'*');
+                } else {
+                    _this7.dom.$regErrorTipCon.html(res.errormsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        /************** 手机号验证模块 *************/
+        //返回上一步
+
+    }, {
+        key: 'bindBackStep',
+        value: function bindBackStep() {
+            var self = this;
+            this.dom.$backStep.off('click').on('click', function () {
+                self.dom.$mobileValidRoot.addClass("hide");
+                self.dom.$accountRegRoot.removeClass("hide");
+                //通知iframe的父容器更新iframe的高度
+                window.parent.postMessage($(".container").height(), '*');
+            });
+        }
+        //绑定手机号验证获取验证码
+
+    }, {
+        key: 'bindMobileValidCode',
+        value: function bindMobileValidCode() {
+            var self = this;
+            this.dom.$mobileValidateValidCode.off('click').on('click', function () {
+                TA.log('pctsh_signup.email.phone.obtain');
+                var mobile = self.dom.$validMobileUsername.val();
+                self.startCountDown({
+                    type: 'mobile',
+                    mobile: mobile,
+                    tipPosition: self.dom.$validErrorCon,
+                    memory: self.data.emailRegValidTime,
+                    btnPosition: self.dom.$mobileValidateValidCode,
+                    inputPosition: self.dom.$validMobileUsername,
+                    seconds: 60
+                }, function (sendSuccess) {
+                    self.mobileValidSensSMS({
+                        shouji: thsencrypt.encode(mobile),
+                        rsa_version: thsencrypt.getVersion()
+                    }, sendSuccess);
+                }, function () {
+                    self.bindMobileValidCode();
+                });
+            });
+        }
+        //绑定手机号验证输入框
+
+    }, {
+        key: 'bindMobileValidInput',
+        value: function bindMobileValidInput() {
+            var self = this;
+            this.dom.$validMobileUsername.off('blur').on('blur', function () {
+                var $target = $(this);
+                var mobile = $target.val();
+                var mobileInput = $target.parents(".mobile-container");
+                if (mobile !== '') {
+                    mobileInput.removeClass("has-error");
+                    self.dom.$validErrorCon.html('');
+                }
+            });
+            this.dom.$validMobileValidcode.off('blur').on('blur', function () {
+                var $target = $(this);
+                var validcode = $target.val();
+                var validcodeInput = $target.parents(".validcode-container");
+                if (validcode !== '') {
+                    validcodeInput.removeClass("has-error");
+                    self.dom.$validErrorCon.html('');
+                }
+            });
+        }
+        //手机号验证发送验证码
+
+    }, {
+        key: 'mobileValidSensSMS',
+        value: function mobileValidSensSMS(data, sendSuccess) {
+            var _this8 = this;
+
+            $.ajax({
+                url: '/bind/dobind',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorcode === 0) {
+                    sendSuccess();
+                } else {
+                    _this8.dom.$validErrorCon.html(res.errormsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        //绑定验证按钮
+
+    }, {
+        key: 'bindMobileValidate',
+        value: function bindMobileValidate() {
+            var self = this;
+            this.dom.$validButton.off('click').on('click', function () {
+                TA.log('pctsh_signup.email.phone.bind');
+                var mobile = self.dom.$validMobileUsername.val();
+                var validcode = self.dom.$validMobileValidcode.val();
+                var mobileInput = self.dom.$validMobileUsername.parents(".mobile-container");
+                var validcodeInput = self.dom.$validMobileValidcode.parents(".validcode-container");
+                if (mobile === '') {
+                    mobileInput.addClass("has-error");
+                    self.dom.$validErrorCon.html('请输入手机号');
+                } else {
+                    self.validMobileNumber(mobile, {
+                        tipPosition: self.dom.$validErrorCon,
+                        tipDesc: '手机号格式错误，请重新输入',
+                        errorPostion: mobileInput
+                    }, function () {
+                        if (validcode === '') {
+                            validcodeInput.addClass("has-error");
+                            self.dom.$validErrorCon.html('请输入验证码');
+                        } else {
+                            self.mobileValid({
+                                source: 'master',
+                                mobile: thsencrypt.encode(mobile),
+                                signcode: validcode,
+                                rsa_version: thsencrypt.getVersion()
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        //立即登录
+
+    }, {
+        key: 'bindValidImmedLogin',
+        value: function bindValidImmedLogin() {
+            var self = this;
+            this.dom.$validImmedLogin.off('click').on('click', function () {
+                TA.log('pctsh_signup.login');
+                self.dom.$mobileValidRoot.addClass("hide");
+                self.dom.$accountLoginRoot.removeClass("hide");
+                //通知iframe的父容器更新iframe的高度
+                window.parent.postMessage($(".container").height(), '*');
+            });
+        }
+        //手机验证
+
+    }, {
+        key: 'mobileValid',
+        value: function mobileValid(data) {
+            var _this9 = this;
+
+            $.ajax({
+                url: '/bind/bindCheckNoPage',
+                type: 'post',
+                data: data,
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorcode === 0) {
+                    _this9.toCreationMain();
+                } else {
+                    _this9.dom.$validErrorCon.html(res.errormsg);
+                }
+            }).fail(function (res) {}).always(function (res) {});
+        }
+        /************** 公共方法模块 **************/
+        //去除两端的空格
+
+    }, {
+        key: 'trimString',
+        value: function trimString(str) {
+            return str.replace(/(^\s*)|(\s*$)/g, '');
+        }
+        //检查只能使用数字或者字母
+
+    }, {
+        key: 'validNumberAndLetter',
+        value: function validNumberAndLetter(str) {
+            return this.checkNewPwd(str);
+        }
+        //匹配中文数字字母和下划线，其他除外
+
+    }, {
+        key: 'validExceptSpecialSign',
+        value: function validExceptSpecialSign(str) {
+            var reg = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/;
+            return reg.test(str);
+        }
+        //手机号验证
+
+    }, {
+        key: 'validMobileNumber',
+        value: function validMobileNumber(mobile, tipOptions, callback) {
+            if (phone_format_reg.test(mobile)) {
+                callback();
+            } else {
+                tipOptions.errorPostion.addClass("has-error");
+                tipOptions.tipPosition.html(tipOptions.tipDesc);
+            }
+        }
+        //判断数字和大小写
+
+    }, {
+        key: 'charModePwd',
+        value: function charModePwd(iN) {
+            if (iN >= 48 && iN <= 57) //数字
+                return 1;
+            if (iN >= 65 && iN <= 90) //大写
+                return 2;
+            if (iN >= 97 && iN <= 122) //小写
+                return 4;else return 8;
+        }
+        //检查密码
+
+    }, {
+        key: 'checkNewPwd',
+        value: function checkNewPwd(pwd) {
+            if (!pwd) {
+                return 0;
+            }
+            var type = {
+                shuzi: 0,
+                zimu: 0
+            };
+            for (i = 0; i < pwd.length; i++) {
+                //密码模式
+                if (this.charModePwd(pwd.charCodeAt(i)) == 1) {
+                    type.shuzi++;
+                } else if (this.charModePwd(pwd.charCodeAt(i)) == 2 || this.charModePwd(pwd.charCodeAt(i)) == 4) {
+                    type.zimu++;
+                }
+            }
+            if (type.shuzi && type.zimu) {
+                // 正确
+                return 1;
+            } else {
+                // 不同时包含数字和字母
+                return 0;
+            }
+        }
+    }, {
+        key: 'reflushImgValid',
+        value: function reflushImgValid(container) {
+            var $target = container;
+            var oldSrc = $target.attr("data-src");
+            var newImgSrc = oldSrc + '&' + Math.random();
+            $target.attr("src", newImgSrc);
+        }
+        //邮箱验证
+
+    }, {
+        key: 'validEmail',
+        value: function validEmail(email, tipOptions, callback) {
+            $.ajax({
+                url: '/checkformat/email',
+                data: {
+                    email: email
+                },
+                type: 'post',
+                dataType: 'json'
+            }).done(function (res) {
+                if (res.errorcode === 0) {
+                    callback();
+                } else {
+                    tipOptions.errorPostion.addClass("has-error");
+                    tipOptions.tipPosition.html(tipOptions.tipDesc);
+                }
+            });
+        }
+        //开始倒计时
+
+    }, {
+        key: 'startCountDown',
+        value: function startCountDown(options, requrest, callback) {
+            var self = this;
+            if (options.type === 'mobile') {
+                if (options.mobile === '') {
+                    options.tipPosition.html('请输入手机号');
+                }
+                //  else if (options.imgValidCode === '') {
+                //     options.tipPosition.html('请输入图形验证码');
+                // }
+                 else {
+                    self.validMobileNumber(options.mobile, {
+                        tipPosition: options.tipPosition,
+                        tipDesc: '手机号格式错误，请重新输入',
+                        errorPostion: options.inputPosition
+                    }, function () {
+                        if (!options.memory) {
+                            requrest(function () {
+                                self.showCountNumber(options, callback);
+                            });
+                        }
+                    });
+                }
+            } else if (options.type === 'email') {
+                if (options.email === '') {
+                    options.tipPosition.html('请输入邮箱');
+                }
+                // else if (options.imgValidCode === '') {
+                //     options.tipPosition.html('请输入图形验证码');
+                // }
+                else {
+                    self.validEmail(options.email, {
+                        tipPosition: options.tipPosition,
+                        tipDesc: '邮箱格式错误，请重新输入',
+                        errorPostion: options.inputPosition
+                    }, function () {
+                        if (!options.memory) {
+                            requrest(function () {
+                                self.showCountNumber(options, callback);
+                            });
+                        }
+                    });
+                }
+            }
+        }
+        //倒计时数字展示
+
+    }, {
+        key: 'showCountNumber',
+        value: function showCountNumber(options, callback) {
+            //清空提示信息
+            options.tipPosition.html('');
+            //取消事件绑定
+            options.btnPosition.off('click');
+            options.btnPosition.css({ 'color': '#40546b', 'cursor': 'pointer' });
+            options.btnPosition.html('60s后重新获取');
+            options.memory = setInterval(function () {
+                if (options.seconds <= 0) {
+                    clearInterval(options.memory);
+                    options.btnPosition.css({ 'color': '#1da1f2', 'cursor': 'default' });
+                    options.btnPosition.html('获取验证码');
+                    callback();
+                    return;
+                }
+                options.btnPosition.html(options.seconds + 's\u540E\u91CD\u65B0\u83B7\u53D6');
+                options.seconds--;
+            }, 1000);
+        }
+        //跳转到创作平台首页
+
+    }, {
+        key: 'getCookie',
+        value: function(cname) {
+            var name = cname + '=';
+            var ca = document.cookie.split(';');
+            for (var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) === ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) === 0) {
+                    return decodeURIComponent(c.substring(name.length, c.length));
+                }
+            }
+            return '';
+        }
+    }, {
+        key: 'isLogin',
+        value: function() {
+            return this.getCookie('user') !== '' ||
+                this.getCookie('userid') !== '' ||
+                this.getCookie('ticket') !== '' ||
+                this.getCookie('utk') !== '';
+        }
+    },
+    {
+        key: 'toCreationMain',
+        value: function toCreationMain() {
+            var searchUrl = location.search;
+            if (searchUrl.length > 0) {
+                var searchContent = searchUrl.split('?')[1];
+                if (searchContent.indexOf('&') > -1) {
+                    var searchArr = searchContent.split("&").map(function (item) {
+                        return {
+                            key: item.split("=")[0],
+                            value: item.split("=")[1]
+                        };
+                    }).filter(function (item) {
+                        return item.key === 'redirect' || item.key === 'redir';
+                    });
+                    var href = searchArr[0].value;
+                    if(!this.isLogin()) {
+                        var href = searchArr[0].value;
+                        var redirUrl = decodeURIComponent(href);
+                        var splitUrlArr = redirUrl.split('&');
+                        var filalUrl = decodeURIComponent(splitUrlArr[splitUrlArr.length - 1].split('=')[1]);
+                        window.parent.location.href = global_server_redir;
+                    }
+                    else {
+                        window.parent.location.href = global_server_redir;
+                    }
+                } else {
+                    var key = searchContent.split('=')[0];
+                    if (key === 'redirect' || key === 'redir') {
+                        //var _href = searchContent.split('=')[1];
+                        if (_href.indexOf('10jqka.com.cn') > -1 || _href.indexOf('ths123.com.cn') > -1) {
+                            window.parent.location.href = global_server_redir;
+                        } else {
+                            window.parent.location.reload();
+                        }
+                    } else {
+                        window.parent.location.reload();
+                    }
+                }
+            } else {
+                window.parent.location.reload();
+            }
+        }
+    }]);
+
+    return userLogin;
+}();
+
+setTimeout(function(){new userLogin()}, 500);

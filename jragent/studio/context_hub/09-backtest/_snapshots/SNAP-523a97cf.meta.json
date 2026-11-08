@@ -1,0 +1,14 @@
+{
+  "snapshot_id": "SNAP-523a97cf",
+  "symbol": "600519.SS",
+  "source": "baostock:sh.600519（真实公开数据·独立服务器·国内直连）",
+  "n_bars": 252,
+  "date_range": [
+    "2025-10-24",
+    "2026-11-06"
+  ],
+  "pool_definition": "单一标的全样本日线（前复权），无成分剔入剔出，无幸存者偏差",
+  "provider": "baostock",
+  "code": "sh.600519",
+  "adjust": "qfq（前复权）"
+}

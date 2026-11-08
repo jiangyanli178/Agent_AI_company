@@ -1,0 +1,13 @@
+{
+  "snapshot_id": "SNAP-a7d7e6a6",
+  "symbol": "600519.SS（示例标的）",
+  "source": "synthetic(seed=47)",
+  "n_bars": 504,
+  "date_range": [
+    "D0000",
+    "D0503"
+  ],
+  "pool_definition": "全样本单一标的，无成分剔入剔出，无幸存者偏差",
+  "seed": 47,
+  "generator": "GBM+趋势段"
+}

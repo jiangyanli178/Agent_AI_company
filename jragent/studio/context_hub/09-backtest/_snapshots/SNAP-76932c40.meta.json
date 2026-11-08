@@ -1,0 +1,13 @@
+{
+  "snapshot_id": "SNAP-76932c40",
+  "symbol": "DEMO-INDEX",
+  "source": "synthetic(seed=42)",
+  "n_bars": 750,
+  "date_range": [
+    "D0000",
+    "D0749"
+  ],
+  "pool_definition": "全样本单一标的，无成分剔入剔出，无幸存者偏差",
+  "seed": 42,
+  "generator": "GBM+趋势段"
+}

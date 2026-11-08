@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>腾讯自选股 · 财经研究流水线</title>
+<style>
+  :root {
+    --bg: #eef1fb;
+    --card: rgba(255, 255, 255, .78);
+    --ink: #1b2340; --muted: #6b7694;
+    --line: #e4e8f6;
+    --accent: #5b6cf0; --accent-2: #8b5cf6; --accent-3: #22d3ee;
+    --accent-ink: #fff; --ok: #16a34a; --warn: #d97706; --err: #ef4444;
+    --shadow: 0 18px 44px rgba(43, 55, 120, .10);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink);
+    background:
+      radial-gradient(1000px 600px at 90% -10%, rgba(139, 92, 246, .14), transparent 60%),
+      radial-gradient(900px 560px at -10% 100%, rgba(34, 211, 238, .13), transparent 60%),
+      linear-gradient(160deg, #f2f4fd 0%, #e9edfb 50%, #eef0ff 100%);
+    background-attachment: fixed;
+    font: 14px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 极光背景装饰 ---------- */
+  .aurora { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .aurora .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; }
+  .aurora .b1 {
+    width: 520px; height: 520px; left: -140px; top: -120px;
+    background: radial-gradient(circle at 30% 30%, rgba(91, 108, 240, .55), rgba(91, 108, 240, 0) 70%);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  .aurora .b2 {
+    width: 480px; height: 480px; right: -120px; top: 18%;
+    background: radial-gradient(circle at 60% 40%, rgba(139, 92, 246, .5), rgba(139, 92, 246, 0) 70%);
+    animation: drift 22s ease-in-out infinite alternate-reverse;
+  }
+  .aurora .b3 {
+    width: 560px; height: 560px; left: 18%; bottom: -220px;
+    background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, .4), rgba(34, 211, 238, 0) 70%);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(42px, 28px, 0) scale(1.08); }
+  }
+
+  /* ---------- 滚动条 ---------- */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border-radius: 999px; border: 3px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  header {
+    position: sticky; top: 0; z-index: 20; overflow: hidden;
+    background: linear-gradient(115deg, #3a49cf, #6a4fe0 55%, #8250ea);
+    color: #fff; padding: 17px 28px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    box-shadow: 0 12px 32px rgba(46, 55, 150, .32);
+  }
+  header::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(600px 130px at 18% -40%, rgba(255,255,255,.22), transparent 60%),
+      radial-gradient(520px 150px at 92% 150%, rgba(34,211,238,.32), transparent 60%);
+  }
+  header > * { position: relative; z-index: 1; }
+  header .brand { display: flex; align-items: center; gap: 13px; }
+  header .brand .ic {
+    width: 42px; height: 42px; border-radius: 13px;
+    background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(255,255,255,.10));
+    border: 1px solid rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+    box-shadow: 0 10px 22px rgba(14, 18, 70, .28);
+  }
+  header h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .01em; }
+  header .tagline { margin: 2px 0 0; opacity: .85; font-size: 12px; letter-spacing: .03em; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .auth-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 650;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28);
+    backdrop-filter: blur(8px);
+  }
+  .auth-pill .led {
+    width: 8px; height: 8px; border-radius: 50%; background: #f0b45b;
+    box-shadow: 0 0 10px rgba(240,180,91,.95);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  .auth-pill.ok .led { background: #6ee7a8; box-shadow: 0 0 10px rgba(110,231,168,.95); }
+  .auth-pill.err .led { background: #f87171; box-shadow: 0 0 10px rgba(248,113,113,.95); }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.25); opacity: .7; }
+  }
+
+  main { max-width: 1080px; margin: 30px auto 48px; padding: 0 20px; display: grid; gap: 22px; }
+
+  /* ---------- 玻璃卡片 ---------- */
+  .card {
+    position: relative; overflow: hidden;
+    background: var(--card); border: 1px solid rgba(255,255,255,.75);
+    border-radius: var(--radius); padding: 24px 26px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.35);
+    transition: transform .22s ease, box-shadow .22s ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 26px 60px rgba(43, 55, 120, .16);
+  }
+  .card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+    opacity: .9;
+  }
+  .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .step {
+    flex: none; width: 32px; height: 32px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; font-weight: 750; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 18px rgba(91, 108, 240, .38);
+  }
+  .card h2 { margin: 0; font-size: 16px; letter-spacing: .01em; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin: 6px 0 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; }
+  .row .field { display: flex; flex-direction: column; gap: 5px; min-width: 180px; flex: 1; }
+  .field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .02em; }
+  .field input, .field select, .field textarea {
+    width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 13px;
+    font: inherit; color: var(--ink); background: rgba(255,255,255,.9); outline: none;
+    transition: border-color .18s, box-shadow .18s, transform .18s;
+  }
+  .field input:hover, .field select:hover, .field textarea:hover { border-color: #cdd5f2; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent); background: #fff;
+    box-shadow: 0 0 0 4px rgba(91, 108, 240, .16), 0 8px 22px rgba(91, 108, 240, .12);
+    transform: translateY(-1px);
+  }
+  .field textarea { resize: vertical; min-height: 62px; }
+  .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .switch {
+    display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(255,255,255,.7); border: 1px solid var(--line);
+    transition: border-color .18s, color .18s;
+  }
+  .switch:hover { border-color: var(--accent); color: var(--ink); }
+  .switch input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  /* ---------- 按钮 ---------- */
+  .btn {
+    position: relative; overflow: hidden;
+    border: 0; border-radius: 12px; padding: 11px 18px; font: inherit;
+    font-weight: 650; letter-spacing: .02em; cursor: pointer; color: var(--accent-ink);
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    transition: transform .16s, filter .16s, box-shadow .16s;
+    box-shadow: 0 10px 24px rgba(91, 108, 240, .32);
+  }
+  .btn::after {
+    content: ""; position: absolute; top: 0; left: -90%; width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent);
+    transform: skewX(-20deg); transition: left .55s ease;
+  }
+  .btn:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: 0 14px 30px rgba(91, 108, 240, .40); }
+  .btn:hover::after { left: 130%; }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn.ghost {
+    background: rgba(238, 241, 251, .9); color: var(--accent);
+    box-shadow: none; border: 1.5px solid var(--line);
+  }
+  .btn.ghost:hover { background: #e6eafb; border-color: var(--accent); box-shadow: 0 8px 20px rgba(91, 108, 240, .16); }
+  .btn.green {
+    background: linear-gradient(120deg, #16a34a, #22c55e);
+    box-shadow: 0 10px 24px rgba(22, 163, 74, .30);
+  }
+  .btn.green:hover { box-shadow: 0 14px 30px rgba(22, 163, 74, .38); }
+
+  /* ---------- 流水线说明 ---------- */
+  .pipeline { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stage {
+    flex: 1; min-width: 210px; padding: 13px 15px; border-radius: 14px;
+    background: linear-gradient(135deg, rgba(91,108,240,.08), rgba(34,211,238,.08));
+    border: 1px solid rgba(91, 108, 240, .18);
+  }
+  .stage b { display: block; font-size: 13px; margin-bottom: 3px; }
+  .stage span { color: var(--muted); font-size: 12px; line-height: 1.65; }
+  .stage .arrow { color: var(--accent-2); font-weight: 750; }
+
+  /* ---------- 登录盒 ---------- */
+  .zxg-login-box {
+    padding: 14px 16px; border-radius: 14px;
+    background: linear-gradient(135deg, rgba(34,211,238,.09), rgba(139,92,246,.09));
+    border: 1px solid rgba(34, 211, 238, .28);
+  }
+  .zxg-login-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .zxg-login-head b { font-size: 13.5px; letter-spacing: .01em; }
+  .zxg-state {
+    font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 999px;
+    background: #e9edf9; color: var(--muted);
+  }
+  .zxg-state.ok { background: rgba(22,163,74,.13); color: var(--ok); }
+  .zxg-state.err { background: rgba(239,68,68,.11); color: var(--err); }
+  .zxg-login-desc { margin: 0 0 10px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+  /* ---------- 表格 ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 12px;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  th {
+    color: var(--muted); font-weight: 650; letter-spacing: .03em; font-size: 12px;
+    background: linear-gradient(180deg, #f7f8fe, #f1f3fc);
+    text-transform: uppercase;
+  }
+  tbody tr { transition: background .16s; }
+  tbody tr:hover { background: rgba(91, 108, 240, .06); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td button { padding: 5px 12px; font-size: 12.5px; }
+  .pill {
+    display: inline-block; padding: 3px 11px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  }
+  .pill.ok { background: linear-gradient(135deg, #dcf5e4, #c9f0d6); color: var(--ok); }
+  .pill.warn { background: linear-gradient(135deg, #fdf0da, #fce6c2); color: var(--warn); }
+  .pill.err { background: linear-gradient(135deg, #fde3e6, #fbd2d8); color: var(--err); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  /* ---------- 报告预览 ---------- */
+  #report-view {
+    margin-top: 14px; background: linear-gradient(180deg, #101426, #0d1122); color: #c9d2f0;
+    border-radius: 14px; padding: 15px 17px;
+    font: 12px/1.75 Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+    max-height: 340px; overflow: auto;
+    border: 1px solid #262e4e;
+    box-shadow: inset 0 12px 30px rgba(0, 0, 0, .28);
+    text-shadow: 0 0 12px rgba(140, 170, 255, .18);
+  }
+  #report-view:empty::before { content: "点击上方报告的「查看」按钮在此预览内容"; color: #5b669a; }
+
+  /* ---------- 终端日志 ---------- */
+  .log-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 16px; border-radius: 14px 14px 0 0;
+    background: linear-gradient(120deg, #1a2040, #12172e);
+    border: 1px solid #262e4e; border-bottom: 0;
+  }
+  .log-bar span:not(.log-title) { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+  .log-bar span:nth-child(1) { background: #ff5f57; box-shadow: 0 0 8px rgba(255,95,87,.6); }
+  .log-bar span:nth-child(2) { background: #febc2e; box-shadow: 0 0 8px rgba(254,188,46,.6); }
+  .log-bar span:nth-child(3) { background: #28c840; box-shadow: 0 0 8px rgba(40,200,64,.6); }
+  .log-bar .log-title { margin-left: 10px; color: #8b96c2; font: 11.5px Consolas, monospace; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #log {
+    background: linear-gradient(180deg, #101426, #0d1122); color: #c9d2f0;
+    border-radius: 0 0 14px 14px; padding: 15px 17px;
+    font: 12px/1.75 Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+    max-height: 320px; overflow: auto;
+    border: 1px solid #262e4e; border-top: 0;
+    box-shadow: inset 0 12px 30px rgba(0, 0, 0, .28);
+    text-shadow: 0 0 12px rgba(140, 170, 255, .18);
+  }
+
+  @media (max-width: 860px) {
+    .card { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 极光背景光斑 -->
+<div class="aurora">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="ic">&#128200;</div>
+    <div>
+      <h1>腾讯自选股 · 财经研究流水线</h1>
+      <p class="tagline">财经信息汇总 Agent → 真实性校验 Agent → 每日发帖（与刷视频助手完全隔离）</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="auth-pill" id="auth-pill"><span class="led"></span><span id="auth-text">检测登录态中…</span></div>
+    <button class="btn ghost" id="btn-refresh-auth" style="color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35)">刷新登录态</button>
+    <button class="btn danger-ghost" id="btn-logout">退出登录</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ① 双 Agent 流水线 -->
+  <section class="card">
+    <div class="card-head"><div class="step">1</div><h2>双 Agent 研究 · 校验流水线</h2></div>
+    <p class="sub">汇总 agent 访问各大财经网站总结对股市有影响的有用信息，校验 agent 逐条核实真实性后生成发布终稿。</p>
+    <div class="pipeline">
+      <div class="stage"><b>&#128218; 汇总 Agent <span class="arrow">→</span></b><span>访问财经网站，总结对股市有影响且有用的信息，输出 <b>reports/日期-brief.md</b>（含来源引用）</span></div>
+      <div class="stage"><b>&#128269; 校验 Agent <span class="arrow">→</span></b><span>逐条核实真实性（多源交叉印证 / 官方渠道），输出 <b>reports/日期-verified.md</b> 与发布终稿 <b>-publish.txt</b></span></div>
+      <div class="stage"><b>&#128227; 发布</b><span>本工具自动拾取最新发布终稿，发布到腾讯自选股社区（MD5 去重 + 每日限额 + 违禁词拦截）</span></div>
+    </div>
+
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:2"><label>报告列表（reports/）</label>
+        <div style="font-size:12px;color:var(--muted)">简报 -brief.md / 校验稿 -verified.md / 发布终稿 -publish.txt</div>
+      </div>
+      <div class="field" style="flex:0"><label>&nbsp;</label>
+        <button class="btn ghost" id="btn-refresh-reports">刷新报告</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>文件</th><th>类型</th><th>大小</th><th>更新时间</th><th>操作</th></tr></thead>
+      <tbody id="reports-body"><tr><td colspan="5" style="color:var(--muted)">加载中…</td></tr></tbody>
+    </table>
+    <div id="report-view"></div>
+  </section>
+
+  <!-- ② 发布 -->
+  <section class="card">
+    <div class="card-head"><div class="step">2</div><h2>发布到腾讯自选股</h2></div>
+    <p class="sub">内容留空时自动拾取 reports/ 下最新的发布终稿（*-publish.txt）；也可手动输入文本或指定文件。</p>
+    <div class="row">
+      <div class="field"><label>手动文本（可选，优先级最高）</label>
+        <textarea id="pub-text" rows="5" placeholder="留空 = 自动取最新发布终稿"></textarea>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>指定文件（可选，相对本项目目录，如 reports/2026-06-01-publish.txt）</label>
+        <input id="pub-file" placeholder="留空 = 自动取最新 *-publish.txt">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn green" id="btn-publish">发布</button>
+      <button class="btn ghost" id="btn-dry">试运行（不真正发布）</button>
+    </div>
+    <div class="hint">安全闸门：违禁词拦截 · 内容 MD5 去重 · 每日限额 · 一次提交不重试 · 无回执记 unknown。</div>
+  </section>
+
+  <!-- ③ 账号 -->
+  <section class="card">
+    <div class="card-head"><div class="step">3</div><h2>腾讯自选股账号</h2></div>
+    <p class="sub">使用 QQ / 微信账号登录腾讯自选股社区（gu.qq.com），登录态保存在本项目 .browser-profile。</p>
+    <div class="zxg-login-box">
+      <div class="zxg-login-head">
+        <b>&#128100; 腾讯自选股登录</b>
+        <span class="zxg-state" id="zxg-state">检测中…</span>
+      </div>
+      <p class="zxg-login-desc">点击「登录」会打开可见浏览器窗口，请在打开的腾讯自选股页面里用 QQ / 微信扫码或账密登录，登录成功后回到本页点击「刷新登录态」。</p>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn" id="btn-login">登录（打开浏览器）</button>
+        <button class="btn ghost" id="btn-check-auth">检测登录态</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 配置 -->
+  <section class="card">
+    <div class="card-head"><div class="step">4</div><h2>发布与定时配置</h2></div>
+    <p class="sub">配置保存在本项目 config.json，与刷视频助手互不影响。</p>
+    <div class="row">
+      <div class="field"><label>发布页 URL</label><input id="cfg-url"></div>
+      <div class="field"><label>每日限额（条）</label><input id="cfg-max" type="number" min="1"></div>
+      <div class="field"><label>定时发布时间（HH:MM）</label><input id="cfg-time" placeholder="09:00"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label>违禁词（一行一个）</label><textarea id="cfg-avoid" rows="3"></textarea></div>
+      <div class="field"><label>备选文案池（一行一条，无终稿时按日轮换）</label><textarea id="cfg-pool" rows="3"></textarea></div>
+    </div>
+    <div class="actions">
+      <label class="switch"><input type="checkbox" id="cfg-daily"> 每日定时发布（自动拾取最新发布终稿）</label>
+      <button class="btn" id="btn-save-cfg">保存配置</button>
+    </div>
+    <div class="hint" id="cfg-msg"></div>
+  </section>
+
+  <!-- 日志 -->
+  <section>
+    <div class="log-bar"><span></span><span></span><span></span><div class="log-title">zxg-agent · 运行日志</div></div>
+    <div id="log">[webui] 控制台就绪，等待操作…</div>
+  </section>
+
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let CFG = {};
+
+function log(msg, cls) {
+  const el = $("log");
+  const t = new Date().toLocaleTimeString();
+  el.textContent += `\n[${t}] ${msg}`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function api(path, body) {
+  const opt = body === undefined
+    ? { method: "GET" }
+    : { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  return r.json();
+}
+
+function setZxgState(ok, text) {
+  const el = $("zxg-state");
+  el.className = "zxg-state" + (ok === true ? " ok" : ok === false ? " err" : "");
+  el.textContent = text;
+}
+
+/* ---------- 登录态 ---------- */
+async function checkAuth() {
+  log("正在检测腾讯自选股登录态（需启动一次浏览器，请稍候）…");
+  const r = await api("/api/auth-status");
+  const data = r.data || {};
+  const st = data.status || {};
+  const ok = !!st.zxg;
+  $("auth-pill").className = "auth-pill " + (ok ? "ok" : "err");
+  $("auth-text").textContent = ok ? "腾讯自选股 · 已登录" : "腾讯自选股 · 未登录";
+  setZxgState(ok, ok ? "已登录" : "未登录");
+  log(ok ? "腾讯自选股登录态：已登录" : "腾讯自选股登录态：未登录，请先点「登录」");
+}
+
+async function doLogin() {
+  log("正在打开浏览器，请在弹出的窗口中完成 QQ / 微信登录…");
+  const r = await api("/api/zxg-login", {});
+  log("登录流程结束：" + (r.ok ? "完成" : (r.error || "失败")) + "，正在刷新登录态…");
+  await checkAuth();
+}
+
+async function doLogout() {
+  if (!confirm("确认退出腾讯自选股登录？")) return;
+  log("正在退出登录…");
+  const r = await api("/api/zxg-logout", {});
+  log("退出登录：" + (r.ok ? "完成" : (r.error || "失败")));
+  await checkAuth();
+}
+
+/* ---------- 报告 ---------- */
+const KIND_PILL = {
+  brief: ['<span class="pill warn">汇总简报</span>', "汇总简报"],
+  verified: ['<span class="pill ok">校验稿</span>', "校验稿"],
+  publish: ['<span class="pill">发布终稿</span>', "发布终稿"],
+  other: ['<span class="pill">其他</span>', "其他"],
+};
+
+async function loadReports() {
+  const r = await api("/api/reports");
+  const body = $("reports-body");
+  const list = (r.reports || []);
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">reports/ 目录暂无报告。先让汇总 agent 产出简报，再让校验 agent 产出校验稿与发布终稿。</td></tr>';
+    return;
+  }
+  body.innerHTML = list.map(x => `
+    <tr>
+      <td>${x.name}</td>
+      <td>${KIND_PILL[x.kind][0]}</td>
+      <td>${(x.size / 1024).toFixed(1)} KB</td>
+      <td>${x.mtime}</td>
+      <td><button class="btn ghost" onclick="viewReport('${x.name}')">查看</button></td>
+    </tr>`).join("");
+}
+
+async function viewReport(name) {
+  log("加载报告：" + name);
+  const r = await api("/api/report?name=" + encodeURIComponent(name));
+  if (!r.ok) { log("报告加载失败：" + (r.error || "")); return; }
+  $("report-view").textContent = r.content || "";
+  $("report-view").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ---------- 发布 ---------- */
+async function doPublish(dry) {
+  const text = $("pub-text").value.trim();
+  const file = $("pub-file").value.trim();
+  log((dry ? "试运行" : "发布") + "中…（" + (text ? "手动文本" : file ? "指定文件 " + file : "自动拾取最新发布终稿") + "）");
+  const r = await api("/api/zxg-publish", { text, file, dry_run: !!dry, headless: true });
+  const d = (r.data && r.data.result) || r.data || {};
+  if (r.ok && d) {
+    log("结果：" + JSON.stringify(d));
+    if (d.status === "sent") log("✅ 发布成功");
+    else if (d.status === "unknown") log("⚠️ 已提交但未拿到回执（unknown），不会重试");
+    else if (d.status === "skipped") log("已跳过：" + (d.reason || ""));
+    else log("❌ 未发布：" + (d.reason || d.status || ""));
+  } else {
+    log("❌ 失败：" + (r.error || JSON.stringify(r.data || {}).slice(0, 300)));
+  }
+}
+
+/* ---------- 配置 ---------- */
+async function loadConfig() {
+  CFG = await api("/api/config");
+  const zxg = CFG.zxg || {};
+  const daily = zxg.daily || {};
+  $("cfg-url").value = zxg.publish_url || "";
+  $("cfg-max").value = zxg.max_per_day || 3;
+  $("cfg-time").value = daily.time || "09:00";
+  $("cfg-daily").checked = !!daily.enabled;
+  $("cfg-avoid").value = (zxg.avoid || []).join("\n");
+  $("cfg-pool").value = (zxg.content_pool || []).join("\n");
+}
+
+function collectConfig() {
+  CFG.zxg = CFG.zxg || {};
+  const zxg = CFG.zxg;
+  zxg.publish_url = $("cfg-url").value.trim();
+  zxg.max_per_day = parseInt($("cfg-max").value, 10) || 3;
+  zxg.avoid = $("cfg-avoid").value.split("\n").map(s => s.trim()).filter(Boolean);
+  zxg.content_pool = $("cfg-pool").value.split("\n").map(s => s.trim()).filter(Boolean);
+  zxg.daily = zxg.daily || {};
+  zxg.daily.enabled = $("cfg-daily").checked;
+  zxg.daily.time = $("cfg-time").value.trim() || "09:00";
+  return CFG;
+}
+
+async function saveConfig() {
+  const r = await api("/api/config", collectConfig());
+  $("cfg-msg").textContent = r.ok ? "✔ 配置已保存到 config.json" : ("保存失败：" + (r.error || ""));
+  log(r.ok ? "配置已保存" : "配置保存失败：" + (r.error || ""));
+}
+
+/* ---------- 事件绑定 ---------- */
+$("btn-refresh-auth").onclick = checkAuth;
+$("btn-check-auth").onclick = checkAuth;
+$("btn-login").onclick = doLogin;
+$("btn-logout").onclick = doLogout;
+$("btn-refresh-reports").onclick = loadReports;
+$("btn-publish").onclick = () => doPublish(false);
+$("btn-dry").onclick = () => doPublish(true);
+$("btn-save-cfg").onclick = saveConfig;
+
+/* ---------- 启动 ---------- */
+(async () => {
+  await loadConfig();
+  await loadReports();
+  await checkAuth();
+})();
+</script>
+</body>
+</html>

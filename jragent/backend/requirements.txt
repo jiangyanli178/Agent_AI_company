@@ -1,0 +1,40 @@
+# 后端依赖
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+pymysql>=1.1
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+
+# 鉴权
+PyJWT>=2.8
+passlib[bcrypt]>=1.7
+
+# MySQL 8.0 默认认证插件是 caching_sha2_password，
+# PyMySQL 在非 SSL 连接下需要 cryptography 才能完成握手，缺了会报
+# "Authentication plugin 'caching_sha2_password' cannot be loaded"
+cryptography>=42.0
+
+# MiMo 官方文档的示例就是用 OpenAI SDK，直接沿用，不手写签名与流式解析
+openai>=1.40
+
+# 调 MiMo / 抓数据（只用于离线拉数脚本，线上运行不依赖）
+httpx>=0.27
+akshare>=1.14
+pandas>=2.0
+
+# 对话附件上传（FastAPI 的 File/UploadFile 依赖它）。
+# 缺这个包时整个 app 启动就报 RuntimeError，所有接口都变成 Failed to fetch，
+# 不只是上传坏——所以它必须在这里，不能靠"用到再装"。
+python-multipart>=0.0.9
+
+# 说明：
+# backtest.py 与 credits.py 只用标准库 + sqlalchemy，故意不依赖 pandas/numpy，
+# 这样现场换机器时，回测与扣费这两个核心模块永远不会因为装包失败而挂掉。
+
+# 量化研究工作室引擎（opc_quant_studio）：取数、回测出图与报告
+# baostock 是国内直连的备用数据源，akshare 失败时降级链要用
+numpy>=1.26
+matplotlib>=3.8
+baostock>=0.9

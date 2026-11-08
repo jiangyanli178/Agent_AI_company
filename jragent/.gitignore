@@ -1,0 +1,59 @@
+# ============ 密钥与环境（最重要，绝不能提交） ============
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/secrets/
+
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ============ 前端 ============
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+.npm/
+.pnpm-store/
+
+# ============ IDE ============
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ============ 日志与备份（含真实经营数据，不进仓库） ============
+logs/
+*.log
+backups/
+*.sql.gz
+dump*.sql
+
+# ============ 系统 ============
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============ 运行时产物 ============
+# AI 生成的策略报告（用户数据，不进仓库）
+backend/reports/
+# 数据备份
+backend/backups/
+# 日志
+backend/logs/
+*.log
